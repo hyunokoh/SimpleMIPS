@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Basic MIPS Simulator in JavaScript (Pipeline Simulation)</title>
+	<link rel="stylesheet" href="normalize.css" media="all">
+	<link rel="stylesheet" href="style.css" media="all">
+</head>
+<body>
+	
+	<div id="layout">
+		<h2>Basic MIPS Simulator in JavaScript (Pipeline Simulation)<small> extened</small></h2>
+		<div id="top-controls" class="clearfix">
+			<div class="top_grid">
+				<fieldset id="src-field">
+					<legend>Assembly Source</legend>
+					<a href="javascript:void(0)" class="btn" id="btnAsm">Assemble &amp; Load</a>
+					<a href="javascript:void(0)" class="btn" id="btnAsmHelp" style="display:none">?</a>
+					<span id="asmText"></span>
+					<br>
+					<textarea name="" id="input">
+					</textarea>
+					<div id="disassembly-window" style="display:none">
+						<p class="active">
+							<span class="addr">0x10000000:</span>
+							<span class="content">add $r1, $r2, $r3</span>
+						</p>
+					</div>
+				</fieldset>
+			</div>
+			<div class="top_grid">
+				<fieldset id="status-field">
+					<legend>CPU Status</legend>
+					<a href="javascript:void(0)" class="btn" id="btnStep">Step</a>
+					<a href="javascript:void(0)" class="btn" id="btnRun" title="Run at 100kHz">Run</a>
+					<a href="javascript:void(0)" class="btn" id="btnReset">Reset</a>
+					<span id="cpuText">No program</span>
+					<a href="javascript:void(0)" class="btn f-right" id="btnToggleStatusView">Pipeline</a>
+					<div id="reg-status">
+						<table id="status-table">
+							<tr>
+								<td class="label">PC</td>
+								<td class="content" id="pcText">0x00000000</td>
+								<td class="label">Cycle</td>
+								<td class="content" id="cycleText">0</td>
+							</tr>
+							<tr>
+								<td class="label">Inst</td>
+								<td class="content" id="instText">0x00000000</td>
+								<td class="label">Stall</td>
+								<td class="content" id="stallText">0</td>
+							</tr>
+							<tr>
+								<td class="label">r0 / zero</td>
+								<td class="content" id="r0Text">0x00000000</td>
+								<td class="label">r16 / s0</td>
+								<td class="content" id="r16Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r1 / at</td>
+								<td class="content" id="r1Text">0x00000000</td>
+								<td class="label">r17 / s1</td>
+								<td class="content" id="r17Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r2 / v0</td>
+								<td class="content" id="r2Text">0x00000000</td>
+								<td class="label">r18 / s2</td>
+								<td class="content" id="r18Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r3 / v1</td>
+								<td class="content" id="r3Text">0x00000000</td>
+								<td class="label">r19 / s3</td>
+								<td class="content" id="r19Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r4 / a0</td>
+								<td class="content" id="r4Text">0x00000000</td>
+								<td class="label">r20 / s4</td>
+								<td class="content" id="r20Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r5 / a1</td>
+								<td class="content" id="r5Text">0x00000000</td>
+								<td class="label">r21 / s5</td>
+								<td class="content" id="r21Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r6 / a2</td>
+								<td class="content" id="r6Text">0x00000000</td>
+								<td class="label">r22 / s6</td>
+								<td class="content" id="r22Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r7 / a3</td>
+								<td class="content" id="r7Text">0x00000000</td>
+								<td class="label">r23 / s7</td>
+								<td class="content" id="r23Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r8 / t0</td>
+								<td class="content" id="r8Text">0x00000000</td>
+								<td class="label">r24 / t8</td>
+								<td class="content" id="r24Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r9 / t1</td>
+								<td class="content" id="r9Text">0x00000000</td>
+								<td class="label">r25 / t9</td>
+								<td class="content" id="r25Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r10 / t2</td>
+								<td class="content" id="r10Text">0x00000000</td>
+								<td class="label">r26 / k0</td>
+								<td class="content" id="r26Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r11 / t3</td>
+								<td class="content" id="r11Text">0x00000000</td>
+								<td class="label">r27 / k1</td>
+								<td class="content" id="r27Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r12 / t4</td>
+								<td class="content" id="r12Text">0x00000000</td>
+								<td class="label">r28 / gp</td>
+								<td class="content" id="r28Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r13 / t5</td>
+								<td class="content" id="r13Text">0x00000000</td>
+								<td class="label">r29 / sp</td>
+								<td class="content" id="r29Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r14 / t6</td>
+								<td class="content" id="r14Text">0x00000000</td>
+								<td class="label">r30 / fp</td>
+								<td class="content" id="r30Text">0x00000000</td>
+							</tr>
+							<tr>
+								<td class="label">r15 / t7</td>
+								<td class="content" id="r15Text">0x00000000</td>
+								<td class="label">r31 / ra</td>
+								<td class="content" id="r31Text">0x00000000</td>
+							</tr>
+						</table>
+						<div class="radio-box">
+							<label for="">Register Value Format : </label>
+							<input type="radio" name="regFormat" id="regFormatHex" checked="checked">
+							<label for="regFormatHex">Hex</label>
+							<input type="radio" name="regFormat" id="regFormatDec">
+							<label for="regFormatDec">Dec</label>
+						</div>
+					</div>
+					<div id="pipeline-status" style="display:none">
+						<fieldset id="pIF">
+							<legend>IF</legend>
+							<label class="label">Inst:</label>
+							<label class="value v-inst">nop</label>
+						</fieldset>
+						<fieldset id="pID">
+							<legend>ID</legend>
+							<label class="label">Inst:</label>
+							<label class="value v-inst">nop</label>
+							<br>
+							<label class="label" title="Branch Condition">BCond:</label>
+							<label class="value v-bCond">n/a</label>
+							<label class="label" title="Branch Taken">BTaken:</label>
+							<label class="value v-bTaken">n/a</label>
+							<br>
+							<label class="label" title="Branch Condition Oprand A">BValA:</label>
+							<label class="value v-bCondAVal">n/a</label>
+							<label class="label" title="Branch Condition Oprand B">BValB:</label>
+							<label class="value v-bCondBVal">n/a</label>
+							<br>
+							<label class="label" title="Branch Condition Oprand A's Source">BValAS:</label>
+							<label class="value v-bCondASrc">n/a</label>
+							<label class="label" title="Branch Condition Oprand B's Source">BValBS:</label>
+							<label class="value v-bCondBSrc">n/a</label>
+							<br>
+							<label class="label" title="Branch Target Base Source">BTBS:</label>
+							<label class="value v-bBaseSrc">n/a</label>
+							<label class="label" title="Branch Target">BTgt:</label>
+							<label class="value v-bTarget">n/a</label>
+							<br>
+							<label class="label" title="Memory Write Value">MWVal:</label>
+							<label class="value v-memWVal">n/a</label>
+							<label class="label" title="Memory Write Value Source">MWSrc:</label>
+							<label class="value v-memWSrc">n/a</label>
+						</fieldset>
+						<fieldset id="pEX">
+							<legend>EX</legend>
+							<label class="label">Inst:</label>
+							<label class="value v-inst">nop</label>
+							<br>
+							<label class="label" title="ALU Operation">ALUOp:</label>
+							<label class="value v-aluOp">n/a</label>
+							<br>
+							<label class="label" title="ALU Oprand A">ALUA:</label>
+							<label class="value v-aluA">n/a</label>
+							<label class="label" title="ALU Oprand B">ALUB:</label>
+							<label class="value v-aluB">n/a</label>
+							<br>
+							<label class="label" title="Oprand A's Source">ALUAS:</label>
+							<label class="value v-aluASrc">n/a</label>
+							<label class="label" title="Oprand B's Source">ALUBS:</label>
+							<label class="value v-aluBSrc">n/a</label>
+						</fieldset>
+						<fieldset id="pMA">
+							<legend>MA</legend>
+							<label class="label">Inst:</label>
+							<label class="value v-inst">nop</label>
+							<br>
+							<label class="label" title="Memory Operation">Op:</label>
+							<label class="value v-memOp">n/a</label>
+							<br>
+							<label class="label" title="Target Address">Addr:</label>
+							<label class="value v-memAddr">n/a</label>
+							<label class="label" title="Value to Write">Value:</label>
+							<label class="value v-memVal">n/a</label>
+						</fieldset>
+						<fieldset id="pWB">
+							<legend>WB</legend>
+							<label class="label">Inst:</label>
+							<label class="value v-inst">nop</label>
+							<br>
+							<label class="label" title="Register Operation">Op:</label>
+							<label class="value v-regOp">n/a</label>
+							<label class="label" title="Value Source">Src:</label>
+							<label class="value v-regSrc">n/a</label>
+							<br>
+							<label class="label" title="Destination Register">Dst:</label>
+							<label class="value v-regDst">n/a</label>
+							<label class="label" title="Value to Write">Value:</label>
+							<label class="value v-regVal">n/a</label>
+						</fieldset>
+					</div>
+				</fieldset>
+			</div>
+			<div class="top_gr">
+				<fieldset id="memory-field">
+					<legend>Memory</legend>
+					<input type="text" name="" id="addrInput" value="0x10000000">
+					<a href="javascript:void(0)" class="btn" id="btnLookup">Lookup</a>
+					<a href="javascript:void(0)" class="btn" id="btnMemoryHelp">?</a>
+					<div id="memory-window">
+					</div>
+				</fieldset>
+			</div>
+		</div>
+		<div id="bottom-controls">
+			<fieldset id="output-field">
+				<legend>Output</legend>
+				<div id="output-window"></div>
+				<a href="javascript:void(0)" class="btn f-right" id="btnClear">Clear</a>
+			</fieldset>
+		</div>
+	</div>
+	
+	
+	
+	<script src="jquery-1.7.min.js"></script>
+	<script src="simpleMIPS.js"></script>
+	<script>
+(function () {
+	// support check
+	if (SimpleMIPS.unsupported) {
+		log('[BROWSER]Uint32Array is not supported. Please use Chrome, Safari, Firefox or IE10+.')
+		return;
+	}
+	// global event bus
+	var eventBus = new SimpleMIPS.EventBus();
+
+	// simulator initialization
+	var MEMORY_BUFFER_SIZE = 22*3*4,
+		mem = new SimpleMIPS.Memory(),
+		cpu = new SimpleMIPS.CPU.Core(mem, SimpleMIPS.CPU.SIM_MODE.ACCURATE),
+		exCode = SimpleMIPS.CPU.EXCEPTION_CODE,
+		assembler = SimpleMIPS.Assembler;
+
+	//window.cpu = cpu;
+
+	cpu.eventBus.register('print', function (src, type, val) {
+		switch (type) {
+			case 's':
+				outputField.log('[CPU]' + val, 'info');
+				break;
+			default:
+				outputField.log('[CPU]' + src + ' = 0x' + val.toString(16), 'info');
+		}
+	});
+
+	// global utils
+	function formatHex(n, len) {
+		len = len || 8;
+		var str = n.toString(16),
+			l = len - str.length;
+		if (l <= 0) return '0x' + str;
+		for (var i = 0;i < l;i++) {
+			str = '0' + str;
+		}
+		return '0x' + str;
+	}
+
+	function formatByte(n) {
+		var str = n.toString(16);
+		if (str.length == 1) {
+			return '0' + str;
+		} else {
+			return str;
+		}
+	}
+
+	// assembly field
+	var assemblyField = (function (eventBus) {
+		var exports = {};
+		// elements
+		var $btnAsm = $('#btnAsm'),
+			$btnAsmHelp = $('#btnAsmHelp'),
+			$disassembly = $('#disassembly-window'),
+			$asmText = $('#asmText'),
+			$input = $('#input'),
+			$lines;
+		// vars
+		var asmResult,
+			lIF, lID, lEX, lMA, lWB,
+			plIF = 0, plID = 0, plEX = 0, plMA = 0, plWB = 0;
+
+		function updateDisassemblyWindow() {
+			if (!asmResult||!asmResult.sourceMap) {
+				$disassembly.children().removeClass('active if id ex ma wb');
+				return;
+			}
+			lIF = asmResult.sourceMap[(cpu.if_id.pc - asmResult.textStart) >> 2],
+			lID = asmResult.sourceMap[(cpu.id_ex.pc - asmResult.textStart) >> 2],
+			lEX = asmResult.sourceMap[(cpu.ex_ma.pc - asmResult.textStart) >> 2],
+			lMA = asmResult.sourceMap[(cpu.ma_wb.pc - asmResult.textStart) >> 2],
+			lWB = asmResult.sourceMap[(cpu.retiredPC - asmResult.textStart) >> 2];
+			if (plIF > 0) { $lines.eq(plIF - 1).attr('class', ''); }
+			if (plID > 0) { $lines.eq(plID - 1).attr('class', ''); }
+			if (plEX > 0) { $lines.eq(plEX - 1).attr('class', ''); }
+			if (plMA > 0) { $lines.eq(plMA - 1).attr('class', ''); }
+			if (plWB > 0) { $lines.eq(plWB - 1).attr('class', ''); }
+			if (lWB > 0) { $lines.eq(lWB-1).addClass('wb'); }
+			if (lMA > 0) { $lines.eq(lMA-1).addClass('ma'); }
+			if (lEX > 0) { $lines.eq(lEX-1).addClass('ex'); }
+			if (lID > 0) { $lines.eq(lID-1).addClass('id'); }
+			if (lIF > 0) { $lines.eq(lIF-1).addClass('if'); }
+			plIF = lIF;
+			plID = lID;
+			plEX = lEX;
+			plMA = lMA;
+			plWB = lWB;
+		}
+
+		function initDisassemblyWindow() {
+			$disassembly.empty();
+			var lines = $input.val().split('\n'),
+				html = '';
+			for (var i = 0, n = lines.length;i < n;i++) {
+				html += '<p><span class="addr">$1</span><span class="content">$2</span></p>'.replace('$1', i+1).replace('$2', lines[i]);
+			}
+			$disassembly.html(html);
+			$lines = $disassembly.children();
+		}
+
+		// event handling
+		$btnAsm.click(function () {
+			if (CPUField.isProgramLoaded()) {
+				// switch back to edit mode
+				$disassembly.empty().hide();
+				$input.show();
+				$btnAsmHelp.hide();
+				$btnAsm.text('Assemble & Load');
+				$asmText.text('');
+				eventBus.post('programUnloaded');
+			} else {
+				// assemble and load
+				try {
+					asmResult = assembler.assemble($input.val());
+					$input.hide();
+					$disassembly.show();
+					$btnAsmHelp.show();
+					$btnAsm.text('Go Back Editing');
+					initDisassemblyWindow();
+					eventBus.post('programAssembled', asmResult);
+					eventBus.post('cpuUpdate');
+					outputField.log('[Assembler]Codesize:' + asmResult.textSize + ' ' + 'Datasize:' + asmResult.dataSize);
+				} catch (err) {
+					outputField.log('[Assembler]' + err.message, 'error');
+				}
+			}
+		});
+
+		$btnAsmHelp.click(function () {
+			outputField.info('[Help]The colored indicator before each line implies the next pipeline stage it will finish. Note that for pseudo instruction, this indication may not be correct as pseudo instructions are expanded to several CPU instructions.')
+		});
+
+		eventBus.register('cpuUpdate', updateDisassemblyWindow);
+
+		return exports;
+	})(eventBus);
+
+	// cpu field
+	var CPUField = (function (eventBus) {
+		var exports = {};
+		// elements
+		var $btnStep = $('#btnStep'),
+			$btnRun = $('#btnRun'),
+			$btnReset = $('#btnReset'),
+			$btnToggleStatusView = $('#btnToggleStatusView'),
+			$registerView = $('#reg-status'),
+			$pipelineView = $('#pipeline-status'),
+			$regFormatHex = $('#regFormatHex'),
+			$regFormatDec = $('#regFormatDec'),
+			$cpuText = $('#cpuText'),
+			$stallText = $('#stallText'),
+		 	$pcText = $('#pcText'),
+			$cycleText = $('#cycleText'),
+			$instText = $('#instText');
+			$registers = [0 ,1 ,2 ,3 ,4 ,5 ,6 ,7 ,8 ,9 ,10,11,12,13,14,15,
+						16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31].map(function (x) {
+							return $('#r' + x + 'Text');
+						});
+		var $pIF      = $('#pIF legend'),
+			$pID      = $('#pID legend'),
+			$pcIF     = $('#pIF .v-pc'),     $instIF = $('#pIF .v-inst'),
+			$pcID     = $('#pID .v-pc'),     $instID = $('#pID .v-inst'),
+			$pcEX     = $('#pEX .v-pc'),     $instEX = $('#pEX .v-inst'),
+			$pcMA     = $('#pMA .v-pc'),     $instMA = $('#pMA .v-inst'),
+			$pcWB     = $('#pWB .v-pc'),     $instWB = $('#pWB .v-inst'),
+			$bCond    = $('#pID .v-bCond'),
+			$bTaken   = $('#pID .v-bTaken'),
+			$bCondAVal= $('#pID .v-bCondAVal'),
+			$bCondBVal= $('#pID .v-bCondBVal'),
+			$bCondASrc= $('#pID .v-bCondASrc'),
+			$bCondBSrc= $('#pID .v-bCondBSrc'),
+			$bBaseSrc = $('#pID .v-bBaseSrc'),
+			$bTarget  = $('#pID .v-bTarget'),
+			$memWVal  = $('#pID .v-memWVal'),
+			$memWSrc  = $('#pID .v-memWSrc'),
+			$aluOp    = $('#pEX .v-aluOp'),
+			$aluA     = $('#pEX .v-aluA'),
+			$aluB     = $('#pEX .v-aluB'),
+			$aluASrc  = $('#pEX .v-aluASrc'),
+			$aluBSrc  = $('#pEX .v-aluBSrc'),
+			$memOp    = $('#pMA .v-memOp'),
+			$memAddr  = $('#pMA .v-memAddr'),
+			$memVal   = $('#pMA .v-memVal'),
+			$regOp    = $('#pWB .v-regOp'),
+			$regSrc   = $('#pWB .v-regSrc'),
+			$regDst   = $('#pWB .v-regDst'),
+			$regVal   = $('#pWB .v-regVal');
+		// vars
+		var loaded = false,
+			freeRunning = false,
+			timer,
+			lastPC = 0x00000000,
+			lastInst = 0x00000000,
+			curPC = 0x00000000,
+			curInst = 0x00000000,
+			registerValueFormat = 'hex',
+			curRegisterFile = new Uint32Array(32),
+			lastRegisterFile = new Uint32Array(32),
+			STALL_FLAGS = SimpleMIPS.CPU.STALL_FLAGS,
+			ALU_OP = SimpleMIPS.CPU.ALU_OP,
+			MEM_OP = SimpleMIPS.CPU.MEM_OP,
+			BRANCH_COND = SimpleMIPS.CPU.BRANCH_COND;
+
+		function decodeException(ex) {
+			var res = '[CPU]';
+			if (ex & exCode.INVALID_INST) { res += 'Invalid instruction.';}
+			if (ex & exCode.INT_OVERFLOW) { res += 'Arithmetic Overflow.';}
+			if (ex & exCode.PC_ALIGN) { res += 'Target address is not aligned.';}
+			if (ex & exCode.DATA_ALIGN) { res += 'Data address is not aligned.';}
+			if (ex & exCode.BRANCH_IN_DELAY_SLOT) { 'Branch instruction in delay slot.';}
+			if (ex & exCode.BREAK) { res += 'Software break.';}
+			if (ex & exCode.PC_LIMIT) { res += 'PC cannot exceed 0x100000000 in simulator.';}
+			return res;
+		}
+
+		function updateCPUStatus() {
+			$pcText.text(formatHex(cpu.pc));
+			$instText.text(formatHex(mem.getWord(cpu.pc)));
+			$cycleText.text(cpu.cycle);
+			$stallText.text(cpu.stalls);
+			cpu.dumpRegisterFile(curRegisterFile);
+			var $cur;
+			for (var i = 0;i < 32;i++) {
+				$cur = $registers[i];
+				if (registerValueFormat == 'dec') {
+					$cur.text(curRegisterFile[i]);
+				} else {
+					$cur.text(formatHex(curRegisterFile[i]));
+				}
+				if (curRegisterFile[i] != lastRegisterFile[i]) {
+					$cur.addClass('changed');
+				} else {
+					$cur.removeClass('changed');
+				}
+			}
+			// swap buffer
+			var tmp = curRegisterFile;
+			curRegisterFile = lastRegisterFile;
+			lastRegisterFile = tmp;
+			lastPC = curPC;
+			lastInst = curInst;
+
+			// pipeline update
+			var str,
+				if_id = cpu.if_id,
+				id_ex = cpu.id_ex,
+				ex_ma = cpu.ex_ma,
+				ma_wb = cpu.ma_wb,
+				debugInfo = cpu.debugInfo;
+			//$pcIF.text(cpu.if_id.pc);
+			$pIF.text((debugInfo.stallFlag & STALL_FLAGS.IF) ? 'IF(Stalled)' : 'IF');
+			$pID.text((debugInfo.stallFlag & STALL_FLAGS.ID) ? 'ID(Stalled)' : 'ID');
+			$instIF.text(assembler.disassemble(if_id.inst));
+			$instID.text(assembler.disassemble(id_ex.inst));
+			$instEX.text(assembler.disassemble(ex_ma.inst));
+			$instMA.text(assembler.disassemble(ma_wb.inst));
+			$instWB.text(assembler.disassemble(cpu.retiredInst));
+			// ID
+			$bCond.text(translateBranchCondition(debugInfo.bCond));
+			if (debugInfo.bCond >= 0) {
+				if (debugInfo.bCond == BRANCH_COND.N) {
+					$bCondAVal.text('n/a');
+					$bCondBVal.text('n/a');
+					$bCondASrc.text('n/a');
+					$bCondBSrc.text('n/a');
+				} else {
+					$bCondAVal.text(formatHex(debugInfo.bCondAVal));
+					$bCondBVal.text(formatHex(debugInfo.bCondBVal));
+					$bCondASrc.text('r' + debugInfo.bCondASrc);
+					$bCondBSrc.text('r' + debugInfo.bCondBSrc);
+				}
+				
+				if (debugInfo.bBaseSrc < 32) {
+					$bBaseSrc.text('r' + debugInfo.bBaseSrc);
+				} else if (debugInfo.bBaseSrc == 32) {
+					$bBaseSrc.text('pc');
+				} else {
+					$bBaseSrc.text('pc[27-0]');
+				}
+				$bTarget.text(debugInfo.bTarget !=undefined ? formatHex(debugInfo.bTarget) : 'n/a');
+				$bTaken.text(debugInfo.bTaken.toString());
+			} else {
+				$bTaken.text('n/a');
+				$bCondAVal.text('n/a');
+				$bCondBVal.text('n/a');
+				$bCondASrc.text('n/a');
+				$bCondBSrc.text('n/a');
+				$bBaseSrc.text('n/a');
+				$bTarget.text('n/a');
+			}
+			if (debugInfo.memWSrc) {
+				str = 'r' + debugInfo.memWSrc;
+				str = (debugInfo.memWFwd) ? str + '[' + debugInfo.memWFwd + ']':str;
+				$memWSrc.text(str);
+				$memWVal.text(formatHex(debugInfo.memWVal));
+			} else {
+				$memWSrc.text('n/a');
+				$memWVal.text('n/a');
+			}
+
+			// EX
+			$aluOp.text(translateALUOp(debugInfo.aluOp));
+			if (debugInfo.aluA != undefined) {
+				$aluA.text(formatHex(debugInfo.aluA));
+				str = (debugInfo.aluASrc == 33) ? 'Immediate' : 'r' + debugInfo.aluASrc;
+				str = (debugInfo.aluAFwd) ? str + '[' + debugInfo.aluAFwd + ']' : str;
+				$aluASrc.text(str);
+			} else {
+				$aluA.text('n/a');
+				$aluASrc.text('n/a');
+			}
+			if (debugInfo.aluB != undefined) {
+				$aluB.text(formatHex(debugInfo.aluB));
+				str = (debugInfo.aluBSrc == 33) ? 'Immediate' : 'r' + debugInfo.aluBSrc;
+				str = (debugInfo.aluBFwd) ? str + '[' + debugInfo.aluBFwd + ']' : str;
+				$aluBSrc.text(str);
+			} else {
+				$aluB.text('n/a');
+				$aluBSrc.text('n/a');
+			}
+
+			// MA
+			$memOp.text(translateMemOp(debugInfo.memOp));
+			if (debugInfo.memOp > 0) {
+				$memAddr.text(formatHex(debugInfo.memAddr));
+				$memVal.text(formatHex(debugInfo.memVal));
+			} else {
+				$memAddr.text('n/a');
+				$memVal.text('n/a');
+			}
+			// WB
+			if (debugInfo.regOp) {
+				$regOp.text('Write');
+				$regSrc.text(debugInfo.regSrc ? 'Memory' : 'ALU');
+				$regDst.text('r' + debugInfo.regDst);
+				$regVal.text(debugInfo.regVal);
+			} else {
+				$regOp.text('n/a');
+				$regSrc.text('n/a');
+				$regDst.text('n/a');
+				$regVal.text('n/a');
+			}
+		}
+
+		function translateBranchCondition(cond) {
+			switch (cond) {
+				case BRANCH_COND.LTZ:
+					return 'A<0';
+				case BRANCH_COND.GTZ:
+					return 'A>0';
+				case BRANCH_COND.LTEZ:
+					return 'A<=0';
+				case BRANCH_COND.GTEZ:
+					return 'A>=0';
+				case BRANCH_COND.EQ:
+					return 'A==B';
+				case BRANCH_COND.NEQ:
+					return 'A!=B';
+				case BRANCH_COND.N:
+					return 'Unconditional';
+				default:
+					return 'n/a';
+			}
+		}
+
+		function translateMemOp(op) {
+			switch (op) {
+				case 1: return 'ReadByte';
+				case 2: return 'ReadHalfword';
+				case 3: return 'ReadWord';
+				case 4: return 'WriteByte';
+				case 5: return 'WriteHalfword';
+				case 6: return 'WriteWord'
+				default: return 'n/a';
+			}
+		}
+
+		function translateALUOp(op) {
+			switch (op) {
+				case ALU_OP.ADD: return 'add';
+				case ALU_OP.SUB: return 'sub';
+				case ALU_OP.AND: return 'and';
+				case ALU_OP.OR:  return 'or';
+				case ALU_OP.XOR: return 'xor';
+				case ALU_OP.NOR: return 'nor';
+				case ALU_OP.SLL: return 'sll';
+				case ALU_OP.SRL: return 'srl';
+				case ALU_OP.SRA: return 'sra';
+				case ALU_OP.SLT: return 'slt';
+				case ALU_OP.SLTU:  return 'slti';
+				case ALU_OP.NOP:
+				default: return 'n/a';
+			}
+		}
+
+		function updateRegisterFormat() {
+			var $cur;
+			for (var i = 0;i < 32;i++) {
+				$cur = $registers[i];
+				if (registerValueFormat == 'dec') {
+					$cur.text(curRegisterFile[i]);
+				} else {
+					$cur.text(formatHex(curRegisterFile[i]));
+				}
+			}
+		}
+
+		// switch format
+		$regFormatDec.click(function () {
+			registerValueFormat = 'dec';
+			updateRegisterFormat();
+		});
+		$regFormatHex.click(function () {
+			registerValueFormat = 'hex';
+			updateRegisterFormat();
+		});
+
+		$btnToggleStatusView.click(function () {
+			if ($btnToggleStatusView.hasClass('pipeline')) {
+				$pipelineView.hide();
+				$registerView.show();
+				$btnToggleStatusView.text('Pipeline')
+					.removeClass('pipeline');
+			} else {
+				$pipelineView.show();
+				$registerView.hide();
+				$btnToggleStatusView.text('Registers')
+					.addClass('pipeline');
+			}
+		});
+
+		// cpu control
+		$btnReset.click(function () {
+			// clear free running timer
+			if (freeRunning) {
+				clearInterval(timer);
+				timer = null;
+				freeRunning = false;
+				$btnRun.text('Run');
+				$cpuText.text('Idle');
+			}
+			cpu.reset();
+			eventBus.post('cpuUpdate');
+		});
+
+		$btnStep.click(function () {
+			var ex;
+			if (loaded) {
+				if (freeRunning) {
+					// stop it first
+					$btnRun.click();
+				} else {
+					// step
+					mem.step();
+					ex = cpu.step();
+					if (ex > 0) {
+						outputField.log(decodeException(ex));
+					}
+					eventBus.post('cpuUpdate');
+				}
+			} else {
+				outputField.log('[CPU]No program loaded. Please load program first.');
+			}
+		});
+
+		$btnRun.click(function () {
+			if (loaded) {
+				if (freeRunning) {
+					clearInterval(timer);
+					timer = null;
+					freeRunning = false;
+					$btnRun.text('Run');
+					$cpuText.text('Idle');
+					eventBus.post('cpuUpdate');
+				} else {
+					timer = setInterval(function () {
+						var i, n, ex;
+						// running at 20*50000 = 1000000 = 100kHz
+						for (i = 0;i < 5000;i++) {
+							mem.step();
+							ex = cpu.step();
+							if (ex > 0) {
+								outputField.log(decodeException(ex));
+								$btnRun.text('Run');
+								$cpuText.text('Idle');
+								freeRunning = false;
+								clearInterval(timer);
+								timer = null;
+								eventBus.post('cpuUpdate');
+								break;
+							}
+						}
+					}, 50);
+					freeRunning = true;
+					$btnRun.text('Stop');
+					$cpuText.text('Busy');
+					outputField.log('[CPU]Running...');
+					outputField.log('[CPU]Do not let cpu run out of valid text segment. Unvisited memory segments will be filled with zeros and cpu will keep excuting NOP. This would force simulator to allocate more memory for new segments.', 'warn')
+				}
+			} else {
+				outputField.log('[CPU]No program loaded. Please load program first.')
+			}
+		});
+
+		eventBus.register('cpuUpdate', updateCPUStatus);
+		eventBus.register('programAssembled', function (asmResult) {
+			mem.importAsm(asmResult);
+			loaded = true;
+			$cpuText.text('Idle');
+		});
+		eventBus.register('programUnloaded', function () {
+			if (freeRunning) {
+				$btnRun.click();
+			}
+			cpu.reset();
+			$cpuText.text('No program');
+			loaded = false;
+		});
+
+		exports.isProgramLoaded = function () {
+			return loaded;
+		}
+
+		return exports;
+	})(eventBus);
+
+	// memory field
+	var memoryField = (function (eventBus) {
+		var exports = {};
+		// elements
+		var $btnLookup = $('#btnLookup'),
+			$btnMemoryHelp = $('#btnMemoryHelp'),
+			$addrInput = $('#addrInput'),
+			$memory = $('#memory-window'),
+			$memorySlots = [],
+			$addrSlots = [];
+		
+		// vars
+		var MEMORY_BUFFER_SIZE = 22*3*4,
+			memWatchAddr = 0x10000000,
+			curMemoryBuffer = new Uint32Array(MEMORY_BUFFER_SIZE),
+			lastMemoryBuffer = new Uint32Array(MEMORY_BUFFER_SIZE);
+
+		function updateMemoryWindow(ignoreChange) {
+			// 22row x 3col x 4bytes = 352bytes
+			var i, j, n = MEMORY_BUFFER_SIZE;
+			if ($memory.children().length == 0) {
+				// initialize
+				for (i = 0;i < n;i+=12) {
+					var $p = $('<p></p>');
+					$addrSlots.push($('<span class="addr"></span>').appendTo($p));
+					$p.append('<span>:<span>');
+					for (j = 0;j < 12;j++) {
+						$memorySlots.push($('<span class="content"><span>').appendTo($p));
+					}
+					$memory.append($p);
+				}
+			} 
+			// update
+			mem.dumpToBuffer(memWatchAddr, MEMORY_BUFFER_SIZE, curMemoryBuffer);
+			for (i = 0;i < n;i++) {
+				$memorySlots[i].text(formatByte(curMemoryBuffer[i], 2));
+				if (curMemoryBuffer[i] != lastMemoryBuffer[i] && !ignoreChange) {
+					$memorySlots[i].addClass('changed');
+				} else {
+					$memorySlots[i].removeClass('changed');
+				}
+			}
+			for (i = 0;i < $addrSlots.length;i++) {
+				$addrSlots[i].text(formatHex(memWatchAddr+(i*12)));
+			}
+			// swap
+			var tmp = curMemoryBuffer;
+			curMemoryBuffer = lastMemoryBuffer;
+			lastMemoryBuffer = tmp;
+		}
+
+		$btnLookup.click(function () {
+			// check lookup range
+			var sa = $addrInput.val().trim();
+			if (sa == '$sp') sa = lastRegisterFile[29];
+			if (sa == '$pc') sa = cpu.pc;
+			// try to look up in symbol table first
+			if (isNaN(sa)) {
+				sa = asmResult.symbolTable[sa];
+			} else {
+				sa = parseInt(sa);
+			}
+			if (isNaN(sa) || sa == undefined) {
+				outputField.log('[Memory]Invaild address number.', 'error');
+			} else {
+				if ((sa > (0x2fffffff) && sa < 0x70000000) || sa > 0x7fffffff) {
+					outputField.log('[Memory]Due to browser limit, viewable memory space range from 0x00000000 to 0x2fffffff and 0x70000000 to 0x7fffffff.', 'error');
+				} else {
+					memWatchAddr = sa;
+					eventBus.post('memoryUpdate', true);
+				}
+			}
+		});
+
+		$btnMemoryHelp.click(function () {
+			outputField.info('[Help]You many enter here a hex number, a label (without colon), $sp or $pc.')
+		});
+
+		eventBus.register('cpuUpdate', updateMemoryWindow);
+		eventBus.register('memoryUpdate', updateMemoryWindow);
+
+		eventBus.post('memoryUpdate');
+
+		return exports;
+	})(eventBus);
+
+	// output field
+	var outputField = (function (eventBus) {
+		var exports = {};
+		// elements
+		$output = $('#output-window'),
+		$btnClear = $('#btnClear');
+
+		var log =exports.log = function (msg, type) {
+			var newMsg = document.createElement('p');
+			newMsg.innerHTML = '[' + (new Date()).toLocaleString() + ']' + msg;
+			newMsg.className = type || '';
+			$output.append(newMsg);
+			$output[0].scrollTop = $output[0].scrollHeight;
+		}
+
+		exports.info = function (msg) {
+			log(msg, 'info');
+		}
+
+		exports.warn = function (msg) {
+			log(msg, 'warn');
+		}
+
+		exports.error = function (msg) {
+			log(msg, 'error');
+		}
+
+		// event handling
+		$btnClear.click(function () {
+			$output.empty();
+		});
+
+		return exports;
+	})(eventBus);
+
+})();
+
+	</script>
+</body>
+</html>

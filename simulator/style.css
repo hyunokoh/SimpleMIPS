@@ -1,0 +1,218 @@
+body {
+	font-size: 13px;
+	color:#333;
+	font-family: 'Helvetica', 'Arial'; 
+}
+
+.clearfix {
+  overflow: auto;
+  zoom: 1;
+}
+
+legend {
+	margin: 0;
+	padding: 0;
+	font-size: 1.3em;
+	font-weight: bold;
+}
+
+fieldset {
+	display: block;
+	background: #f9f9f9;
+	border-radius: 5px;
+	margin: 0;
+	padding: 4px 10px 8px 8px;
+	overflow: hidden;
+}
+
+fieldset:hover {
+	background: #eee;
+}
+textarea,
+input[type="text"] {
+	border: 1px solid #ccc;
+	border-radius: 3px
+}
+
+input[type="text"] {
+	padding: 3px;
+}
+
+.btn {
+	display: inline-block;
+	border-radius: 4px;
+	padding: 3px 4px;
+	border: 1px solid #ccc;
+	background: #fff;
+	color: #333;
+	text-decoration: none;
+}
+
+.radio-box {
+	margin: 4px 0;
+}
+.radio-box input[type="radio"] {
+	vertical-align: middle;
+}
+
+.error { color: red; }
+.warn { color:orange;}
+.info {color:blue;}
+.f-right { float: right; }
+.hidden { display: none; }
+.changed { color: red; }
+
+#layout {
+	width: 1020px;
+	margin: 0 auto;
+}
+
+#top-controls fieldset {
+	height: 436px;
+}
+.top_grid {
+	float: left;
+	margin: 0 1px;
+}
+	#src-field { width: 325px; }
+		#input {
+			margin-top: 5px;
+			width: 320px;
+			height: 382px;
+		}
+		#disassembly-window {
+			width: 100%;
+			height: 385px;
+			overflow-y: scroll;
+			margin-top: 5px;
+			font-size: 1.0em;
+		}
+		#disassembly-window p {
+			margin: 2px 0 2px 12px;
+			padding: 0 0 0 2px;
+			position: relative;
+		}
+		#disassembly-window p.active {
+			
+		}
+		#disassembly-window p:before {
+			content: "";
+			display: block;
+			position: absolute;
+			left: -12px;
+			width: 12px;
+			height: 20px;
+			background: #999;
+			color: white;
+			text-align: center;
+		}
+		#disassembly-window p.if:before { 
+			content:"F";
+			background: blue;
+		}
+		#disassembly-window p.id:before { 
+			content:"D";
+			background: green;
+		}
+		#disassembly-window p.ex:before { 
+			content:"E";
+			background: red;
+		}
+		#disassembly-window p.ma:before { 
+			content:"M";
+			background: purple;
+		}
+		#disassembly-window p.wb:before { 
+			content:"W";
+			background: orange;
+		}
+		#disassembly-window .addr {
+			padding-right: 6px;
+			display: inline-block;
+			font-weight: bold;
+			width: 24px;
+			text-align: right;
+		}
+		#disassembly-window .content {
+			display: inline-block;
+		}
+	#status-field { width: 296px; }
+		#status-table {
+			width: 100%;
+			margin-top: 10px;
+		}
+		#status-table td {
+			padding: 2px 4px;
+			border: 1px solid #999;
+			background: white;
+			font-size: 12px;
+		}
+		#status-table tr:hover td {
+			background: #eee;
+		}
+		#status-table .label {
+			font-weight: bold;
+		}
+		#status-table .content {
+			color : #666;	
+		}
+		#status-table .content.changed {
+			color: red;
+		}
+		#pipeline-status fieldset {
+			border-radius: 0;
+			float: none;
+			background: white;
+			height: auto;
+			padding: 0 8px 7px 5px;
+		}
+		#pipeline-status fieldset legend {
+			font-size: 1.0em;
+		}
+			#pIF legend { color: blue; }
+			#pID legend { color: green; }
+			#pEX legend { color: red; }
+			#pMA legend { color: purple; }
+			#pWB legend { color: orange; }
+		#pipeline-status label.label {
+			display: inline-block;
+			width: 50px;
+			text-align: right;
+		}
+		#pipeline-status label.value {
+			display: inline-block;
+			min-width: 80px;
+		}
+	#memory-field { width: 330px;}
+		#addrInput { width: 80px;}
+		#memory-window {
+		}
+		#memory-window p { margin: 2px 0; }
+		#memory-window .addr {
+			display: inline-block;
+			font-weight: bold;
+			width: 74px;
+		}
+		#memory-window .content {
+			display: inline-block;
+			padding: 0 3px;
+			width: 14px;
+			text-align: center;
+		}
+		#memory-window .content.changed { color: red; }
+#bottom-controls {}
+	#output-field {
+		margin-right: 3px;
+	}
+		#output-window {
+			margin-bottom: 4px;
+			padding: 4px;
+			border: 1px solid #ccc;
+			border-radius: 3px;
+			background: white;
+			height: 100px;
+			overflow-y: scroll;
+		}
+		#output-window p {
+			margin: 2px 0;
+		}
