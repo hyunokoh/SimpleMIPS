@@ -305,7 +305,8 @@ var SimpleMIPS = (function (undefined) {
 			'bgtz'	: ['0001 11ss sss0 0000 iiii iiii iiii iiii','RI','S'], // if $s>0 pc=pc+sign_ext(imm<<2)
 			'bltz'	: ['0000 01ss sss0 0000 iiii iiii iiii iiii','RI','S'], // if $s<0 pc=pc+sign_ext(imm<<2)
 			'bgez'	: ['0000 01ss sss0 0001 iiii iiii iiii iiii','RI','S'], // if $s>=0 pc=pc+sign_ext(imm<<2)
-			//'bltzal': ['',''], // 
+			'bltzal': ['0000 01ss sss1 0000 iiii iiii iiii iiii','RI','S'], // if $s<0 ra = pc+4 and pc=pc+sign_ext(imm<<2)
+			'bgez'	: ['0000 01ss sss0 0001 iiii iiii iiii iiii','RI','S'], // if $s>=0 pc=pc+sign_ext(imm<<2)
 			//'bgezal': ['',''], // 
 			// misc
 			'nop'	: ['0000 0000 0000 0000 0000 0000 0000 0000','N','N'], // no op
@@ -357,7 +358,7 @@ var SimpleMIPS = (function (undefined) {
 			// build translators
 			var translators = {}, funcBody,
 				instCode, funcCode,
-				immStartIdx, immEndIdx, immLength;
+				immStartIdx, immEndIdx, immLength, rtCode;
 			for (var inst in instructionTable) {
 				funcBody = '';
 				cur = instructionTable[inst][0]
@@ -370,6 +371,7 @@ var SimpleMIPS = (function (undefined) {
 				// 0xffffffff > 0
 				// 0xffffffff & 0xffffffff = -1
 				funcBody += 'var base = ' + (instCode << 26) + ';\n';
+				
 				// rs, rd, rt
 				if (cur.indexOf('s') > 0) {
 					funcBody += 'base |= (info.rs << 21);\n';
@@ -398,6 +400,13 @@ var SimpleMIPS = (function (undefined) {
 					funcCode = parseInt(cur.slice(26, 32), 2);
 					funcBody += 'base |= ' + (funcCode) + ';\n';
 				}
+
+				// For bltz, bgez, bltzal, bgezal
+				if((immLength > 0) && (cur.indexOf('t') < 0)) {
+					rtCode = parseInt(cur.slice(11, 16), 2);
+					funcBody += 'base |= ' + (rtCode << 16) + ';\n';
+				}
+
 				funcBody += 'if (base < 0) base = 4294967296 + base;\n'
 				funcBody += 'return base;';
 				translators[inst] = new Function('info', funcBody);
@@ -614,13 +623,20 @@ var SimpleMIPS = (function (undefined) {
 				case 1:
 					switch (rt) {
 						case 0: // bltz rs, offset
-							if (r[rs] | 0 < 0) {
+							if ((r[rs] | 0) < 0) {
+								nextPC = this.pc + (imms << 2);
+								hasDelaySlot = true;
+							}
+							break;
+						case 16: // bltzal rs, offset
+							if ((r[rs] | 0) < 0) {
+								r[31] = nextPC+4; 
 								nextPC = this.pc + (imms << 2);
 								hasDelaySlot = true;
 							}
 							break;
 						case 1: // bgez rs, offset
-							if (r[rs] | 0 >= 0) {
+							if ((r[rs] | 0) >= 0) {
 								nextPC = this.pc + (imms << 2);
 								hasDelaySlot = true;
 							}
@@ -1403,6 +1419,13 @@ var SimpleMIPS = (function (undefined) {
 							branchTargetOffset = imms << 2;
 							branchCondSrcA = rs;
 							branchCond = BRANCH_COND.LT;
+							break;
+						case 16: // bltz rs, offset
+							prepareBranch = true;
+							branchTargetOffset = imms << 2;
+							branchCondSrcA = rs;
+							branchCond = BRANCH_COND.LT;
+							this.registerFile[31] = this.pc+4;
 							break;
 						case 1: // bgez rs, offset
 							prepareBranch = true;
@@ -2459,7 +2482,7 @@ var SimpleMIPS = (function (undefined) {
 						[TOKEN_TYPES.WORD, TOKEN_TYPES.INTEGER]
 					]);
 					if (expectedTokens) {
-						result.rt = expectedTokens[0].value;
+						result.rs = expectedTokens[0].value;
 						result.imm = expectedTokens[2].value;
 					} else {
 						throw new Error('Expecting 1 register operand and 1 immediate for ' + instName);
@@ -2727,7 +2750,7 @@ var SimpleMIPS = (function (undefined) {
 						}
 					}
 				} else {
-					si = (cur.addr - statusTable.textStartAddr) >> 2
+					si = (cur.addr - statusTable.textStartAddr) >> 2;
 					text[si] = CPU.translators[cur.inst](cur);					
 				}
 			}
@@ -2859,6 +2882,7 @@ var SimpleMIPS = (function (undefined) {
 				case 1:
 					switch (rt) {
 						case 0: str = 'bltz rs, offset'; break;
+						case 16: str = 'bltzal rs, offset'; break;
 						case 1: str = 'bgez rs, offset'; break;
 						default: str = 'unknown'; break;
 					}
