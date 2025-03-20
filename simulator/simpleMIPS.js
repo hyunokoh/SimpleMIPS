@@ -311,6 +311,8 @@ var SimpleMIPS = (function (undefined) {
 			// misc
 			'nop'	: ['0000 0000 0000 0000 0000 0000 0000 0000','N','N'], // no op
 			'break' : ['0000 00cc cccc cccc cccc cccc cc00 1101','N','N'], // break
+			// Add for syscall
+			'syscall': ['0000 0000 0000 0000 0000 0000 0000 1100','N','N'], // syscall (0x0C)
 			'print' : ['1111 11ss sss0 0000 0000 0000 0000 0000','R','N'], // print $s simulation
 			'printm': ['1111 11ss sss0 0000 0000 0000 0000 0001','R','N'], // print mem[$s] simulation
 			'prints': ['1111 11ss sss0 0000 0000 0000 0000 0010','R','N']  // print string@$s
@@ -432,7 +434,9 @@ var SimpleMIPS = (function (undefined) {
 			DATA_ALIGN : 8,
 			BRANCH_IN_DELAY_SLOT : 16,
 			BREAK : 32,
-			PC_LIMIT : 64
+			PC_LIMIT : 64,
+			// ADD for reset
+			SYSCALL : 128
 		};
 		var MAX_PC = 0x10000000; // limit pc range in simulator
 		exports.EXCEPTION_CODE = EXCEPTION_CODE;
@@ -497,8 +501,18 @@ var SimpleMIPS = (function (undefined) {
 			this.cycle = 0;
 			this.pc = 0x00040000;
 			this.branchTarget = undefined;
+			
+			
+			for (let i = 0; i < 32; i++) {
+				this.registerFile[i] = 0x00000000;
+			}
+
 			this.registerFile[28] = 0x10008000; // $gp
 			this.registerFile[29] = 0x7ffffffc; // $sp
+
+			// ADD for reset
+			this.halted = false;
+			
 		}
 
 		function _fStep(inDelaySlot) {
@@ -548,6 +562,10 @@ var SimpleMIPS = (function (undefined) {
 							nextPC = r[rs];
 							hasDelaySlot = true; 
 							break;
+						// ADD for reset
+						case 12: // syscall
+							this.halted = true;
+							return EXCEPTION_CODE.SYSCALL;
 						case 13: // break;
 							// @TODO Break
 							exception |= EXCEPTION_CODE.BREAK;
@@ -821,19 +839,29 @@ var SimpleMIPS = (function (undefined) {
 
 			// exec instruction in delay slot in the next step
 			// but save target PC here
+			// if (hasDelaySlot) {
+			// 	if (this.branchTarget) {
+			// 		exception |= EXCEPTION_CODE.BRANCH_IN_DELAY_SLOT;
+			// 	}
+			// 	this.branchTarget = nextPC;
+			// }
+
+
+			// this.pc += 4;
+			// if (this.pc > 0xffffffff) this.pc -= 0x100000000;
+			// if (this.pc > MAX_PC) {
+			// 	this.pc = MAX_PC;
+			// 	exception |= PC_LIMIT;
+			// }
 			if (hasDelaySlot) {
-				if (this.branchTarget) {
-					exception |= EXCEPTION_CODE.BRANCH_IN_DELAY_SLOT;
+				this.pc = nextPC;
+			} else {
+				this.pc += 4;
+				if (this.pc > 0xffffffff) this.pc -= 0x100000000;
+				if (this.pc > MAX_PC) {
+					this.pc = MAX_PC;
+					exception |= PC_LIMIT;
 				}
-				this.branchTarget = nextPC;
-			}
-
-
-			this.pc += 4;
-			if (this.pc > 0xffffffff) this.pc -= 0x100000000;
-			if (this.pc > MAX_PC) {
-				this.pc = MAX_PC;
-				exception |= PC_LIMIT;
 			}
 
 			return exception;
