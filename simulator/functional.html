@@ -427,6 +427,11 @@ fieldset:hover{background:#eee}textarea,input[type="text"]{border:1px solid #ccc
 			$cpuText.text('Idle');
 		}
 		cpu.reset();
+
+		// ADD for reset
+		lastRegisterFile = new Uint32Array(32); 
+    	lastMemoryBuffer = new Uint32Array(MEMORY_BUFFER_SIZE);
+
 		updateCPUStatus();
 		updateMemoryWindow();
 		updateDisassemblyWindow();
