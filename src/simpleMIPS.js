@@ -488,7 +488,6 @@ var SimpleMIPS = (function (undefined) {
 		function _fReset() {
 			this.cycle = 0;
 			this.pc = 0x00040000;
-			this.branchTarget = undefined;
 			this.registerFile[28] = 0x10008000; // $gp
 			this.registerFile[29] = 0x7ffffffc; // $sp
 			this.hi = 0;
@@ -503,7 +502,6 @@ var SimpleMIPS = (function (undefined) {
 			r[0] = 0; // $r0 is always 0
 			// decode
 			var tmp = 0,
-				hasDelaySlot = false,
 				nextPC = this.pc + 4,
 				exception = 0,
 				breaking = false,
@@ -540,7 +538,6 @@ var SimpleMIPS = (function (undefined) {
 							break;
 						case 8: // jr rs
 							nextPC = r[rs];
-							hasDelaySlot = true; 
 							break;
 						case 13: // break;
 							// @TODO Break
@@ -626,13 +623,11 @@ var SimpleMIPS = (function (undefined) {
 						case 0: // bltz rs, offset
 							if (r[rs] | 0 < 0) {
 								nextPC = this.pc + (imms << 2);
-								hasDelaySlot = true;
 							}
 							break;
 						case 1: // bgez rs, offset
 							if (r[rs] | 0 >= 0) {
 								nextPC = this.pc + (imms << 2);
-								hasDelaySlot = true;
 							}
 							break;
 						default:
@@ -644,38 +639,32 @@ var SimpleMIPS = (function (undefined) {
 					tmp = (tmp & 0xf0000000) | ((inst & 0x03ffffff) << 2);
 					if (tmp < 0) tmp = tmp + 4294967296;
 					nextPC = tmp;
-					hasDelaySlot = true;
 					break;
 				case 3: // JAL imm
 					tmp = this.pc;
 					tmp = (tmp & 0xf0000000) | ((inst & 0x03ffffff) << 2);
 					if (tmp < 0) tmp = tmp + 4294967296;
-					this.registerFile[31] = nextPC+4;
+					this.registerFile[31] = nextPC; // $ra = PC+4 (no delay slot)
 					nextPC = tmp;
-					hasDelaySlot = true;
 					break;
 				case 4: // beq rs, rt, offset
 					if (r[rs] == r[rt]) {
 						nextPC = this.pc + (imms << 2);
-						hasDelaySlot = true;
 					}
 					break;
 				case 5: // bne rs, rt, offset
 					if (r[rs] != r[rt]) {
 						nextPC = this.pc + (imms << 2);
-						hasDelaySlot = true;
 					}
 					break;
 				case 6: // blez rs, offset
 					if (r[rs] | 0 <= 0) {
 						nextPC = this.pc + (imms << 2);
-						hasDelaySlot = true;
 					}
 					break;
 				case 7: // bgtz rs, offset
 					if ((r[rs] | 0) > 0) {
 						nextPC = this.pc + (imms << 2);
-						hasDelaySlot = true;
 					}
 					break;
 				case 8: // addi rt, rs, imm with overflow check
@@ -800,12 +789,7 @@ var SimpleMIPS = (function (undefined) {
 					exception |= EXCEPTION_CODE.INVALID_INST;
 			}
 			
-			// exec pending branch
-			if (this.branchTarget) {
-				this.pc = this.branchTarget;
-				this.branchTarget = undefined;
-				return exception;
-			}
+
 
 			if (nextPC < 0) nextPC += 0x100000000;
 			if (nextPC & 0x3) {
@@ -813,17 +797,7 @@ var SimpleMIPS = (function (undefined) {
 				nextPC += 4 - (nextPC & 0x3);
 			}
 
-			// exec instruction in delay slot in the next step
-			// but save target PC here
-			if (hasDelaySlot) {
-				if (this.branchTarget) {
-					exception |= EXCEPTION_CODE.BRANCH_IN_DELAY_SLOT;
-				}
-				this.branchTarget = nextPC;
-			}
-
-
-			this.pc += 4;
+			this.pc = nextPC;
 			if (this.pc > 0xffffffff) this.pc -= 0x100000000;
 			if (this.pc > MAX_PC) {
 				this.pc = MAX_PC;

@@ -56,7 +56,7 @@ fieldset:hover{background:#eee}textarea,input[type="text"]{border:1px solid #ccc
 				  <option value="print">Hello World</option>
 				  <option value="arithmetic">Arithmetic</option>
 				  <option value="loop">Loop (1~10 sum)</option>
-				  <option value="jal">Subroutine (jal/jr)</option>
+				  <option value="fib">Fibonacci (recursive)</option>
 				  <option value="array">Array Sum</option>
 				</select>
 				<span id="asmText"></span>
@@ -659,23 +659,38 @@ loop: [
 'add  $t0, $t0, $t1     # sum += i',
 'addi $t1, $t1, 1       # i++',
 'bne  $t1, $t2, loop    # if i != 11, repeat',
-'nop                    # delay slot',
 'print $t0              # print sum (55)',
 'nop'].join('\n'),
 
-jal: [
-'# Subroutine call with jal/jr',
-'ori  $a0, $zero, 7     # arg: n = 7',
-'jal  double            # call double(n)',
-'nop                    # delay slot',
-'print $v0              # print result (14)',
+fib: [
+'# Recursive Fibonacci: fib(7) = 13',
+'# fib(0)=0, fib(1)=1, fib(n)=fib(n-1)+fib(n-2)',
+'ori  $a0, $zero, 7     # n = 7',
+'jal  fib               # call fib(n)',
+'print $v0              # print result (13)',
 'break',
 '',
-'# double(n): returns n*2 in $v0',
-'double:',
-'add  $v0, $a0, $a0    # $v0 = n * 2',
-'jr   $ra              # return',
-'nop                   # delay slot'].join('\n'),
+'# fib: $a0=n, returns fib(n) in $v0',
+'fib:',
+'slti $t0, $a0, 2       # t0 = (n < 2)',
+'beq  $t0, $zero, rec   # if n >= 2, recurse',
+'add  $v0, $a0, $zero   # base case: return n',
+'jr   $ra',
+'rec:',
+'addi $sp, $sp, -12     # allocate stack frame',
+'sw   $ra, 8($sp)       # save return address',
+'sw   $a0, 4($sp)       # save n',
+'addi $a0, $a0, -1      # arg = n-1',
+'jal  fib               # v0 = fib(n-1)',
+'sw   $v0, 0($sp)       # save fib(n-1)',
+'lw   $a0, 4($sp)       # restore n',
+'addi $a0, $a0, -2      # arg = n-2',
+'jal  fib               # v0 = fib(n-2)',
+'lw   $t0, 0($sp)       # t0 = fib(n-1)',
+'add  $v0, $v0, $t0     # v0 = fib(n-1)+fib(n-2)',
+'lw   $ra, 8($sp)       # restore return address',
+'addi $sp, $sp, 12      # deallocate stack frame',
+'jr   $ra'].join('\n'),
 
 array: [
 '# Array sum',
@@ -692,7 +707,6 @@ array: [
 'addi $t0, $t0, 4       # next element',
 'addi $t3, $t3, 1       # i++',
 'bne  $t3, $t1, loop    # if i != 5, repeat',
-'nop                    # delay slot',
 'print $t2              # print sum (150)',
 'nop'].join('\n')
 	};
