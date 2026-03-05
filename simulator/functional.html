@@ -208,6 +208,7 @@ fieldset:hover{background:#eee}textarea,input[type="text"]{border:1px solid #ccc
 		registerValueFormat = 'hex',
 		curRegisterFile  = new Uint32Array(32),
 		lastRegisterFile = new Uint32Array(32),
+		lastHi = 0, lastLo = 0,
 		curMemoryBuffer  = new Uint32Array(MEMORY_BUFFER_SIZE),
 		lastMemoryBuffer = new Uint32Array(MEMORY_BUFFER_SIZE),
 		breakpoints      = {},
@@ -422,7 +423,10 @@ fieldset:hover{background:#eee}textarea,input[type="text"]{border:1px solid #ccc
 			else $cur.removeClass('changed');
 		}
 		$hiText.text(registerValueFormat == 'dec' ? cpu.hi : formatHex(cpu.hi));
+		if (cpu.hi !== lastHi) $hiText.addClass('changed'); else $hiText.removeClass('changed');
 		$loText.text(registerValueFormat == 'dec' ? cpu.lo : formatHex(cpu.lo));
+		if (cpu.lo !== lastLo) $loText.addClass('changed'); else $loText.removeClass('changed');
+		lastHi = cpu.hi; lastLo = cpu.lo;
 		var tmp = curRegisterFile; curRegisterFile = lastRegisterFile; lastRegisterFile = tmp;
 		lastPC = curPC; lastInst = curInst;
 		updateStackViewer();
@@ -509,6 +513,7 @@ fieldset:hover{background:#eee}textarea,input[type="text"]{border:1px solid #ccc
 		cpu.reset();
 		lastRegisterFile = new Uint32Array(32);
 		lastMemoryBuffer = new Uint32Array(MEMORY_BUFFER_SIZE);
+		lastHi = 0; lastLo = 0;
 		updateCPUStatus(); updateMemoryWindow(); updateDisassemblyWindow();
 	});
 

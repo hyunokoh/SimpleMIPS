@@ -610,6 +610,7 @@ array: [
 			registerValueFormat = 'hex',
 			curRegisterFile  = new Uint32Array(32),
 			lastRegisterFile = new Uint32Array(32),
+			lastHi = 0, lastLo = 0,
 			STALL_FLAGS  = SimpleMIPS.CPU.STALL_FLAGS,
 			ALU_OP       = SimpleMIPS.CPU.ALU_OP,
 			MEM_OP       = SimpleMIPS.CPU.MEM_OP,
@@ -664,7 +665,10 @@ array: [
 			}
 			var tmp = curRegisterFile; curRegisterFile = lastRegisterFile; lastRegisterFile = tmp;
 			$hiText.text(registerValueFormat=='dec' ? cpu.hi : formatHex(cpu.hi));
+			if (cpu.hi !== lastHi) $hiText.addClass('changed'); else $hiText.removeClass('changed');
 			$loText.text(registerValueFormat=='dec' ? cpu.lo : formatHex(cpu.lo));
+			if (cpu.lo !== lastLo) $loText.addClass('changed'); else $loText.removeClass('changed');
+			lastHi = cpu.hi; lastLo = cpu.lo;
 			updateStackViewer();
 
 			// pipeline
@@ -765,7 +769,7 @@ array: [
 				clearInterval(timer); timer=null; freeRunning=false;
 				$btnRun.text('Run'); $cpuText.text('Idle');
 			}
-			cpu.reset(); eventBus.post('cpuUpdate');
+			cpu.reset(); lastHi = 0; lastLo = 0; eventBus.post('cpuUpdate');
 		});
 
 		$btnStep.click(function() {
