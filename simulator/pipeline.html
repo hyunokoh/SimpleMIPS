@@ -6,14 +6,13 @@
 	<link rel="stylesheet" href="normalize.css" media="all">
 	<link rel="stylesheet" href="style.css" media="all">
 	<style>
-#editor-wrapper{display:flex;margin-top:5px;width:100%;height:100%}
+#editor-wrapper{display:flex;margin-top:5px;width:100%;height:382px}
 #line-numbers{width:32px;min-width:32px;background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:3px 0 0 3px;padding:3px 4px 3px 2px;font-size:12px;font-family:'Courier New',monospace;color:#aaa;overflow:hidden;text-align:right;line-height:18px;user-select:none;cursor:default;box-sizing:border-box}
 #line-numbers span{display:block;line-height:18px}
-#input{flex:1;margin-top:0 !important;border-radius:0 3px 3px 0;font-size:12px;font-family:'Courier New',monospace;line-height:18px;resize:none;box-sizing:border-box;padding:3px}
 	</style>
 </head>
 <body>
-	
+
 	<div id="layout">
 		<h2>Basic MIPS Simulator in JavaScript (Pipeline Simulation)<small> extened</small></h2>
 		<div id="top-controls" class="clearfix">
@@ -25,11 +24,22 @@
 					<a href="javascript:void(0)" class="btn" id="btnLoad">Load</a>
 					<input type="file" id="fileInput" accept=".asm,.s,.txt" style="display:none">
 					<a href="javascript:void(0)" class="btn" id="btnAsmHelp" style="display:none">?</a>
+					<select id="exampleSelect" style="margin-left:4px;font-size:12px;border:1px solid #ccc;border-radius:3px;padding:2px">
+					  <option value="">-- Examples --</option>
+					  <option value="print">Hello World</option>
+					  <option value="arithmetic">Arithmetic</option>
+					  <option value="loop">Loop</option>
+					  <option value="jal">Subroutine (jal/jr)</option>
+					  <option value="array">Array Sum</option>
+					</select>
 					<span id="asmText"></span>
 					<br>
 					<div id="editor-wrapper">
 						<div id="line-numbers"><span>1</span></div>
-						<textarea name="" id="input"></textarea>
+						<div id="editor-area">
+						  <pre id="highlight-mirror"></pre>
+						  <textarea name="" id="input"></textarea>
+						</div>
 					</div>
 					<div id="disassembly-window" style="display:none">
 						<p class="active">
@@ -249,6 +259,10 @@
 							<label class="value v-regVal">n/a</label>
 						</fieldset>
 					</div>
+					<div id="stack-viewer">
+					  <div class="stack-header">Stack ($sp)</div>
+					  <div id="stack-window"></div>
+					</div>
 				</fieldset>
 			</div>
 			<div class="top_gr">
@@ -270,9 +284,9 @@
 			</fieldset>
 		</div>
 	</div>
-	
-	
-	
+
+
+
 	<script src="jquery-1.7.min.js"></script>
 	<script src="simpleMIPS.js"></script>
 	<script>
@@ -325,6 +339,15 @@
 		}
 	}
 
+	// outer-scope breakpoints and pcToLine (accessible to both assemblyField and CPUField)
+	var breakpoints = {};
+
+	function pcToLine(pc, asmResult) {
+		if (!asmResult || !asmResult.sourceMap) return null;
+		var idx = (pc - asmResult.textStart) >> 2;
+		return asmResult.sourceMap[idx] || null;
+	}
+
 	// assembly field
 	var assemblyField = (function (eventBus) {
 		var exports = {};
@@ -338,11 +361,13 @@
 			$disassembly = $('#disassembly-window'),
 			$asmText = $('#asmText'),
 			$input = $('#input'),
+			$mirror = $('#highlight-mirror'),
 			$lines;
 		// vars
 		var asmResult,
 			lIF, lID, lEX, lMA, lWB,
-			plIF = 0, plID = 0, plEX = 0, plMA = 0, plWB = 0;
+			plIF = 0, plID = 0, plEX = 0, plMA = 0, plWB = 0,
+			errorLine = null;
 
 		function updateDisassemblyWindow() {
 			if (!asmResult||!asmResult.sourceMap) {
@@ -382,16 +407,205 @@
 			$lines = $disassembly.children();
 		}
 
+		// syntax highlighting
+		var INST_SET = {add:1,addu:1,addi:1,addiu:1,sub:1,subu:1,mult:1,multu:1,div:1,divu:1,and:1,andi:1,or:1,ori:1,xor:1,xori:1,nor:1,sll:1,sllv:1,srl:1,sra:1,srlv:1,srav:1,slt:1,slti:1,sltu:1,sltiu:1,lw:1,lb:1,lbu:1,lh:1,lhu:1,lui:1,sw:1,sb:1,sh:1,beq:1,bne:1,blez:1,bgtz:1,bltz:1,bgez:1,bltzal:1,bgezal:1,j:1,jr:1,jal:1,jalr:1,mfhi:1,mflo:1,mthi:1,mtlo:1,nop:1,break:1,syscall:1,print:1,prints:1,printm:1,la:1,li:1,pushr:1,popr:1};
+		var DIR_SET = {'.text':1,'.data':1,'.word':1,'.byte':1,'.half':1,'.space':1,'.asciiz':1,'.align':1,'.globl':1};
+
+		function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+		function highlightCode(text) {
+			return text.split('\n').map(function(line, lineIdx) {
+				var out = '', i = 0, n = line.length;
+				while (i < n) {
+					var c = line[i];
+					if (c === '#') {
+						out += '<span class="asm-comment">' + escHtml(line.slice(i)) + '</span>';
+						break;
+					}
+					if (c === '$') {
+						var j = i+1;
+						while (j < n && /[\w]/.test(line[j])) j++;
+						out += '<span class="asm-reg">' + escHtml(line.slice(i,j)) + '</span>';
+						i = j; continue;
+					}
+					if (c === '0' && line[i+1] === 'x') {
+						var j = i+2;
+						while (j < n && /[0-9a-fA-F]/.test(line[j])) j++;
+						out += '<span class="asm-num">' + escHtml(line.slice(i,j)) + '</span>';
+						i = j; continue;
+					}
+					if (/[0-9]/.test(c) || (c==='-' && i+1<n && /[0-9]/.test(line[i+1]))) {
+						var j = i + (c==='-'?1:0);
+						while (j < n && /[0-9]/.test(line[j])) j++;
+						out += '<span class="asm-num">' + escHtml(line.slice(i,j)) + '</span>';
+						i = j; continue;
+					}
+					if (c === '.' || /[a-zA-Z_]/.test(c)) {
+						var j = i+1;
+						while (j < n && /[\w.]/.test(line[j])) j++;
+						var word = line.slice(i,j);
+						var esc = escHtml(word);
+						if (j < n && line[j] === ':') {
+							out += '<span class="asm-label">' + esc + ':</span>';
+							i = j+1;
+						} else if (DIR_SET[word.toLowerCase()]) {
+							out += '<span class="asm-dir">' + esc + '</span>';
+							i = j;
+						} else if (INST_SET[word.toLowerCase()]) {
+							out += '<span class="asm-inst">' + esc + '</span>';
+							i = j;
+						} else {
+							out += esc; i = j;
+						}
+						continue;
+					}
+					out += escHtml(c); i++;
+				}
+				return out;
+			}).join('\n') + '\n';
+		}
+
+		function updateHighlight() {
+			var lines = $input.val().split('\n');
+			var html = lines.map(function(line, idx) {
+				var highlighted = highlightCode(line + '\n').slice(0, -1);
+				if (errorLine !== null && idx + 1 === errorLine) {
+					return '<span class="hl-error-line">' + highlighted + '</span>';
+				}
+				return highlighted;
+			}).join('\n') + '\n';
+			$mirror.html(html);
+			$mirror[0].scrollTop = $input[0].scrollTop;
+			$mirror[0].scrollLeft = $input[0].scrollLeft;
+		}
+
+		function clearError() {
+			errorLine = null;
+			$lineNumbers.find('span.error-line').removeClass('error-line');
+		}
+
 		// line numbers
 		function updateLineNumbers() {
 			var count = $input.val().split('\n').length;
 			var html = '';
 			for (var i = 1; i <= count; i++) { html += '<span>' + i + '</span>'; }
 			$lineNumbers.html(html);
+			// re-apply breakpoints after re-render
+			$.each(breakpoints, function(lineNo) {
+				$lineNumbers.find('span').eq(lineNo - 1).addClass('bp-dot');
+			});
 		}
-		$input.on('input', updateLineNumbers);
-		$input.on('scroll', function () { $lineNumbers[0].scrollTop = $input[0].scrollTop; });
+
+		// breakpoint click handler
+		$lineNumbers.on('click', 'span', function() {
+			var $span = $(this);
+			var lineNo = parseInt($span.text(), 10);
+			if (isNaN(lineNo)) return;
+			if (breakpoints[lineNo]) {
+				delete breakpoints[lineNo];
+				$span.removeClass('bp-dot');
+			} else {
+				breakpoints[lineNo] = true;
+				$span.addClass('bp-dot');
+			}
+		});
+
+		$input.on('input', function() {
+			clearError();
+			updateLineNumbers();
+			updateHighlight();
+		});
+		$input.on('scroll', function () {
+			$lineNumbers[0].scrollTop = $input[0].scrollTop;
+			$mirror[0].scrollTop = $input[0].scrollTop;
+			$mirror[0].scrollLeft = $input[0].scrollLeft;
+		});
 		updateLineNumbers();
+		updateHighlight();
+
+		// Examples
+		var EXAMPLES = {
+		print: [
+		'# Hello World: print a number',
+		'    ori  $t0, $zero, 42     # value to print',
+		'    print $t0               # prints: [CPU]t0 = 0x0000002a',
+		'    ori  $t1, $zero, 100',
+		'    print $t1',
+		'    nop'].join('\n'),
+
+		arithmetic: [
+		'# Arithmetic example',
+		'    ori  $t0, $zero, 15     # t0 = 15',
+		'    ori  $t1, $zero, 4      # t1 = 4',
+		'    add  $t2, $t0, $t1      # t2 = 19',
+		'    sub  $t3, $t0, $t1      # t3 = 11',
+		'    mult $t0, $t1           # HI:LO = 15*4 = 60',
+		'    mflo $t4                # t4 = 60',
+		'    div  $t0, $t1           # LO=3 (quotient), HI=3 (remainder)',
+		'    mflo $t5                # t5 = 3',
+		'    mfhi $t6                # t6 = 3',
+		'    nop'].join('\n'),
+
+		loop: [
+		'# Loop: sum 1 to 10',
+		'    ori  $t0, $zero, 0      # sum = 0',
+		'    ori  $t1, $zero, 1      # i = 1',
+		'    ori  $t2, $zero, 10     # limit = 10',
+		'loop:',
+		'    add  $t0, $t0, $t1      # sum += i',
+		'    addi $t1, $t1, 1        # i++',
+		'    ble  $t1, $t2, loop',
+		'# Note: bne works too',
+		'# replace ble with: bne $t1, $t3, loop (where t3=11)',
+		'    ori  $t3, $zero, 11',
+		'retry:',
+		'    ori  $t4, $zero, 1',
+		'    ori  $t5, $zero, 1',
+		'    add  $t6, $t4, $t5',
+		'    nop'].join('\n'),
+
+		jal: [
+		'# Subroutine call with jal/jr',
+		'    ori  $a0, $zero, 5      # argument: n = 5',
+		'    jal  double             # call double(n)',
+		'    nop                     # delay slot',
+		'    print $v0               # print result (10)',
+		'    break',
+		'',
+		'# double(n): returns 2*n in $v0',
+		'double:',
+		'    add  $v0, $a0, $a0      # v0 = a0 + a0',
+		'    jr   $ra                # return',
+		'    nop                     # delay slot'].join('\n'),
+
+		array: [
+		'# Array sum: sum elements of an array',
+		'.data',
+		'arr: .word 10, 20, 30, 40, 50',
+		'.text',
+		'    la   $t0, arr           # t0 = base address',
+		'    ori  $t1, $zero, 5      # count = 5',
+		'    ori  $t2, $zero, 0      # sum = 0',
+		'    ori  $t3, $zero, 0      # i = 0',
+		'loop:',
+		'    lw   $t4, 0($t0)        # t4 = arr[i]',
+		'    add  $t2, $t2, $t4      # sum += t4',
+		'    addi $t0, $t0, 4        # advance pointer',
+		'    addi $t3, $t3, 1        # i++',
+		'    bne  $t3, $t1, loop',
+		'    nop',
+		'    print $t2               # print sum (150)'].join('\n')
+		};
+
+		$('#exampleSelect').change(function() {
+			var key = this.value;
+			if (!key || !EXAMPLES[key]) return;
+			$input.val(EXAMPLES[key]);
+			this.value = '';
+			clearError();
+			updateLineNumbers();
+			updateHighlight();
+		});
 
 		// save / load
 		var currentFilename = '';
@@ -444,7 +658,9 @@
 			var reader = new FileReader();
 			reader.onload = function (e) {
 				$input.val(e.target.result);
+				clearError();
 				updateLineNumbers();
+				updateHighlight();
 				currentFilename = file.name;
 				outputField.log('[File]Loaded: ' + file.name);
 			};
@@ -457,6 +673,7 @@
 				// switch back to edit mode
 				$disassembly.empty().hide();
 				$input.show();
+				$('#editor-area').show();
 				$btnAsmHelp.hide();
 				$btnAsm.text('Assemble & Load');
 				$asmText.text('');
@@ -465,7 +682,7 @@
 				// assemble and load
 				try {
 					asmResult = assembler.assemble($input.val());
-					$input.hide();
+					$('#editor-area').hide();
 					$disassembly.show();
 					$btnAsmHelp.show();
 					$btnAsm.text('Go Back Editing');
@@ -474,6 +691,12 @@
 					eventBus.post('cpuUpdate');
 					outputField.log('[Assembler]Codesize:' + asmResult.textSize + ' ' + 'Datasize:' + asmResult.dataSize);
 				} catch (err) {
+					var match = err.message.match(/^L(\d+):/);
+					errorLine = match ? parseInt(match[1], 10) : null;
+					if (errorLine !== null) {
+						$lineNumbers.find('span').eq(errorLine - 1).addClass('error-line');
+					}
+					updateHighlight();
 					outputField.log('[Assembler]' + err.message, 'error');
 				}
 			}
@@ -504,7 +727,8 @@
 			$stallText = $('#stallText'),
 		 	$pcText = $('#pcText'),
 			$cycleText = $('#cycleText'),
-			$instText = $('#instText');
+			$instText = $('#instText'),
+			$stackWindow = $('#stack-window');
 			$registers = [0 ,1 ,2 ,3 ,4 ,5 ,6 ,7 ,8 ,9 ,10,11,12,13,14,15,
 						16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31].map(function (x) {
 							return $('#r' + x + 'Text');
@@ -552,7 +776,8 @@
 			STALL_FLAGS = SimpleMIPS.CPU.STALL_FLAGS,
 			ALU_OP = SimpleMIPS.CPU.ALU_OP,
 			MEM_OP = SimpleMIPS.CPU.MEM_OP,
-			BRANCH_COND = SimpleMIPS.CPU.BRANCH_COND;
+			BRANCH_COND = SimpleMIPS.CPU.BRANCH_COND,
+			asmResult = null;
 
 		function decodeException(ex) {
 			var res = '[CPU]';
@@ -564,6 +789,31 @@
 			if (ex & exCode.BREAK) { res += 'Software break.';}
 			if (ex & exCode.PC_LIMIT) { res += 'PC cannot exceed 0x100000000 in simulator.';}
 			return res;
+		}
+
+		function checkBreakpoint() {
+			var line = pcToLine(cpu.pc, asmResult);
+			if (line && breakpoints[line]) {
+				outputField.log('[CPU]Breakpoint hit at line ' + line);
+				return true;
+			}
+			return false;
+		}
+
+		function updateStackViewer() {
+			var regs = curRegisterFile || lastRegisterFile;
+			var sp = regs ? regs[29] : 0x7ffffffc;
+			if (!sp) sp = 0x7ffffffc;
+			var html = '';
+			for (var i = -4; i <= 4; i++) {
+				var addr = (sp + i * 4) >>> 0;
+				var val;
+				try { val = mem.getWord(addr); } catch(e) { val = 0; }
+				var label = i === 0 ? '$sp' : (i < 0 ? '$sp' + (i*4) : '$sp+' + (i*4));
+				var cls = i === 0 ? 'sp-current' : '';
+				html += '<p class="' + cls + '"><span class="saddr">' + label + ':</span><span class="sval">' + formatHex(val) + '</span></p>';
+			}
+			$stackWindow.html(html);
 		}
 
 		function updateCPUStatus() {
@@ -622,7 +872,7 @@
 					$bCondASrc.text('r' + debugInfo.bCondASrc);
 					$bCondBSrc.text('r' + debugInfo.bCondBSrc);
 				}
-				
+
 				if (debugInfo.bBaseSrc < 32) {
 					$bBaseSrc.text('r' + debugInfo.bBaseSrc);
 				} else if (debugInfo.bBaseSrc == 32) {
@@ -693,6 +943,8 @@
 				$regDst.text('n/a');
 				$regVal.text('n/a');
 			}
+
+			updateStackViewer();
 		}
 
 		function translateBranchCondition(cond) {
@@ -809,6 +1061,7 @@
 					if (ex > 0) {
 						outputField.log(decodeException(ex));
 					}
+					checkBreakpoint();
 					eventBus.post('cpuUpdate');
 				}
 			} else {
@@ -842,6 +1095,15 @@
 								eventBus.post('cpuUpdate');
 								break;
 							}
+							if (checkBreakpoint()) {
+								$btnRun.text('Run');
+								freeRunning = false;
+								clearInterval(timer);
+								timer = null;
+								$cpuText.text('Idle');
+								eventBus.post('cpuUpdate');
+								break;
+							}
 						}
 					}, 50);
 					freeRunning = true;
@@ -856,7 +1118,8 @@
 		});
 
 		eventBus.register('cpuUpdate', updateCPUStatus);
-		eventBus.register('programAssembled', function (asmResult) {
+		eventBus.register('programAssembled', function (result) {
+			asmResult = result;
 			mem.importAsm(asmResult);
 			loaded = true;
 			$cpuText.text('Idle');
@@ -887,7 +1150,7 @@
 			$memory = $('#memory-window'),
 			$memorySlots = [],
 			$addrSlots = [];
-		
+
 		// vars
 		var MEMORY_BUFFER_SIZE = 22*3*4,
 			memWatchAddr = 0x10000000,
@@ -908,7 +1171,7 @@
 					}
 					$memory.append($p);
 				}
-			} 
+			}
 			// update
 			mem.dumpToBuffer(memWatchAddr, MEMORY_BUFFER_SIZE, curMemoryBuffer);
 			for (i = 0;i < n;i++) {
