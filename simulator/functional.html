@@ -10,7 +10,11 @@ body{font-size:13px;color:#333;font-family:'Helvetica','Arial'}.clearfix{display
 fieldset:hover{background:#eee}textarea,input[type="text"]{border:1px solid #ccc;border-radius:3px}input[type="text"]{padding:3px}
 .btn{display:inline-block;border-radius:4px;padding:3px 4px;border:1px solid #ccc;background:#fff;color:#333;text-decoration:none}.radio-box{margin:4px 0}
 .radio-box input[type="radio"]{vertical-align:middle}.error{color:red}.warn{color:orange}.info{color:blue}.f-right{float:right}
-.hidden{display:none}.changed{color:red}#layout{width:1020px;margin:0 auto}#top-controls fieldset{float:left;height:436px}#src-field{width:345px}#input{margin-top:5px;width:340px;height:382px}
+.hidden{display:none}.changed{color:red}#layout{width:1020px;margin:0 auto}#top-controls fieldset{float:left;height:436px}#src-field{width:345px}
+#editor-wrapper{display:flex;margin-top:5px;width:340px;height:382px}
+#line-numbers{width:32px;min-width:32px;background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:3px 0 0 3px;padding:3px 4px 3px 2px;font-size:12px;font-family:'Courier New',monospace;color:#aaa;overflow:hidden;text-align:right;line-height:18px;user-select:none;cursor:default;box-sizing:border-box}
+#line-numbers span{display:block;line-height:18px}
+#input{flex:1;margin-top:0;border-radius:0 3px 3px 0;font-size:12px;font-family:'Courier New',monospace;line-height:18px;resize:none;box-sizing:border-box;padding:3px}
 #disassembly-window{width:100%;height:385px;overflow-y:scroll;margin-top:5px;font-size:1.0em}#disassembly-window p{margin:2px 0;padding:0 0 0 2px;border-left:5px solid #ccc}
 #disassembly-window p.active{border-left:5px solid #666}#disassembly-window .addr{padding-right:6px;display:inline-block;font-weight:bold;width:24px;text-align:right}
 #disassembly-window .content{display:inline-block}#status-field{width:276px}#status-table{width:100%;margin-top:10px}#status-table td{padding:2px 4px;border:1px solid #999;background:white;font-size:12px}
@@ -28,11 +32,15 @@ fieldset:hover{background:#eee}textarea,input[type="text"]{border:1px solid #ccc
 			<fieldset id="src-field">
 				<legend>Assembly Source</legend>
 				<a href="javascript:void(0)" class="btn" id="btnAsm">Assemble &amp; Load</a>
+				<a href="javascript:void(0)" class="btn" id="btnSave">Save</a>
+				<a href="javascript:void(0)" class="btn" id="btnLoad">Load</a>
+				<input type="file" id="fileInput" accept=".asm,.s,.txt" class="hidden">
 				<span id="asmText"></span>
 				<br>
-				<textarea name="" id="input">
-
-				</textarea>
+				<div id="editor-wrapper">
+					<div id="line-numbers"><span>1</span></div>
+					<textarea name="" id="input"></textarea>
+				</div>
 				<div id="disassembly-window" style="display:none">
 					<p class="active">
 						<span class="addr">0x10000000:</span>
@@ -196,6 +204,10 @@ fieldset:hover{background:#eee}textarea,input[type="text"]{border:1px solid #ccc
 
 	// elemenets
 	var $btnAsm = $('#btnAsm'),
+		$btnSave = $('#btnSave'),
+		$btnLoad = $('#btnLoad'),
+		$fileInput = $('#fileInput'),
+		$lineNumbers = $('#line-numbers'),
 		$btnStep = $('#btnStep'),
 		$btnRun = $('#btnRun'),
 		$btnReset = $('#btnReset'),
@@ -525,6 +537,75 @@ fieldset:hover{background:#eee}textarea,input[type="text"]{border:1px solid #ccc
 				updateMemoryWindow(true);
 			}
 		}
+	});
+
+	// line numbers
+	function updateLineNumbers() {
+		var count = $input.val().split('\n').length;
+		var html = '';
+		for (var i = 1; i <= count; i++) { html += '<span>' + i + '</span>'; }
+		$lineNumbers.html(html);
+	}
+	$input.on('input', updateLineNumbers);
+	$input.on('scroll', function () { $lineNumbers[0].scrollTop = $input[0].scrollTop; });
+	updateLineNumbers();
+
+	// save / load
+	var currentFilename = '';
+
+	$btnSave.click(function () {
+		var content = $input.val();
+		var suggestedName = currentFilename || 'program.asm';
+		if (window.showSaveFilePicker) {
+			window.showSaveFilePicker({
+				suggestedName: suggestedName,
+				types: [{ description: 'MIPS Assembly', accept: { 'text/plain': ['.asm', '.s', '.txt'] } }]
+			}).then(function (fileHandle) {
+				currentFilename = fileHandle.name;
+				return fileHandle.createWritable();
+			}).then(function (writable) {
+				return writable.write(content).then(function () { return writable.close(); });
+			}).catch(function (err) {
+				if (err.name !== 'AbortError') log('[File]Save failed: ' + err.message, 'error');
+			});
+		} else {
+			var name = currentFilename;
+			if (!name) {
+				name = prompt('Save as:', suggestedName);
+				if (!name) return;
+				if (name.indexOf('.') === -1) name += '.asm';
+				currentFilename = name;
+			}
+			var blob = new Blob([content], { type: 'text/plain' });
+			var url = URL.createObjectURL(blob);
+			var a = document.createElement('a');
+			a.href = url; a.download = name;
+			document.body.appendChild(a); a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		}
+	});
+
+	$btnLoad.click(function () {
+		if (loaded) {
+			log('[File]Please go back to editing mode before loading a file.', 'warn');
+			return;
+		}
+		$fileInput[0].value = '';
+		$fileInput[0].click();
+	});
+
+	$fileInput.change(function () {
+		var file = this.files[0];
+		if (!file) return;
+		var reader = new FileReader();
+		reader.onload = function (e) {
+			$input.val(e.target.result);
+			updateLineNumbers();
+			currentFilename = file.name;
+			log('[File]Loaded: ' + file.name);
+		};
+		reader.readAsText(file);
 	});
 
 	// switch format

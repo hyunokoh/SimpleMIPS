@@ -285,13 +285,15 @@ var SimpleMIPS = (function (undefined) {
 			'sra'	: ['0000 0000 000t tttt dddd daaa aa00 0011','RRA','N'], // $d=$t>>a arithmetic
 			'srlv'	: ['0000 00ss ssst tttt dddd d000 0000 0110','RRR','N'], // $d=$t>>($s&0x1f) logic
 			'srav'	: ['0000 00ss ssst tttt dddd d000 0000 0111','RRR','N'], // $d=$t>>($s&0x1f) arithmetic
-			// multiplication
-			//'mfhi'	: ['',''],
-			//'mflo'	: ['',''],
-			'mul'	: ['0000 00ss ssst tttt dddd d000 0001 1000','RRR','N'], // $d=$s*$t with ov
-			'mulu'	: ['0000 00ss ssst tttt dddd d000 0001 1001','RRR','N'], // $d=$s*$t with ov
-			'div'	: ['0000 00ss ssst tttt dddd d000 0001 1010','RRR','N'], // $d=$s*$t with ov
-			'divu'	: ['0000 00ss ssst tttt dddd d000 0001 1011','RRR','N'], // $d=$s*$t with ov
+			// multiplication / division
+			'mfhi'	: ['0000 0000 0000 0000 dddd d000 0001 0000','RD','N'], // $d=HI
+			'mthi'	: ['0000 00ss sss0 0000 0000 0000 0001 0001','R','N'],  // HI=$s
+			'mflo'	: ['0000 0000 0000 0000 dddd d000 0001 0010','RD','N'], // $d=LO
+			'mtlo'	: ['0000 00ss sss0 0000 0000 0000 0001 0011','R','N'],  // LO=$s
+			'mult'	: ['0000 00ss ssst tttt 0000 0000 0001 1000','RR','N'], // HI:LO=$s*$t signed
+			'multu'	: ['0000 00ss ssst tttt 0000 0000 0001 1001','RR','N'], // HI:LO=$s*$t unsigned
+			'div'	: ['0000 00ss ssst tttt 0000 0000 0001 1010','RR','N'], // LO=$s/$t, HI=$s%$t signed
+			'divu'	: ['0000 00ss ssst tttt 0000 0000 0001 1011','RR','N'], // LO=$s/$t, HI=$s%$t unsigned
 			
 			// jmp (HAVE DELAY SLOTS)
 			'j'	: ['0000 10ii iiii iiii iiii iiii iiii iiii','I','U'], // imm<<2 specify low bits of pc
@@ -321,8 +323,8 @@ var SimpleMIPS = (function (undefined) {
 					RRR : [],
 					RRI : [],
 					RRA : [],
-					//RRC : [],
-					//RR  : [],
+					RR  : [],	// e.g. mult rs, rt
+					RD  : [],	// e.g. mfhi rd
 					RI  : [],
 					RC  : [],
 					R 	: [],
@@ -489,6 +491,8 @@ var SimpleMIPS = (function (undefined) {
 			this.branchTarget = undefined;
 			this.registerFile[28] = 0x10008000; // $gp
 			this.registerFile[29] = 0x7ffffffc; // $sp
+			this.hi = 0;
+			this.lo = 0;
 		}
 
 		function _fStep(inDelaySlot) {
@@ -542,29 +546,36 @@ var SimpleMIPS = (function (undefined) {
 							// @TODO Break
 							exception |= EXCEPTION_CODE.BREAK;
 							break;
-						//case 16: // mfhi
-						//case 17: // mthi
-						//case 18: // mflo
-						//case 19: // mtlo
-						case 24: // mult
+						case 16: // mfhi rd
+							r[rd] = this.hi;
+							break;
+						case 17: // mthi rs
+							this.hi = r[rs];
+							break;
+						case 18: // mflo rd
+							r[rd] = this.lo;
+							break;
+						case 19: // mtlo rs
+							this.lo = r[rs];
+							break;
+						case 24: // mult rs, rt -> HI:LO = signed(rs) * signed(rt)
 							tmp = (r[rs] | 0) * (r[rt] | 0);
-							if (tmp > 0x7fffffff || tmp < -0x80000000) {
-								exception |= EXCEPTION_CODE.INT_OVERFLOW;
-							}
-							r[rd] = tmp;
+							this.lo = ((tmp % 4294967296) + 4294967296) % 4294967296;
+							this.hi = ((Math.floor(tmp / 4294967296)) + 4294967296) % 4294967296;
 							break;
-						case 25: // multu rd, rs, rt
-							r[rd] = r[rs] * r[rt];
+						case 25: // multu rs, rt -> HI:LO = unsigned(rs) * unsigned(rt)
+							tmp = (r[rs] >>> 0) * (r[rt] >>> 0);
+							this.lo = tmp >>> 0;
+							this.hi = Math.floor(tmp / 4294967296) >>> 0;
 							break;
-						case 26: // div rd, rs, rt
-							tmp = (r[rs] | 0) / (r[rt] | 0);
-							if (tmp > 0x7fffffff || tmp < -0x80000000) {
-								exception |= EXCEPTION_CODE.INT_OVERFLOW;
-							}
-							r[rd] = tmp;
+						case 26: // div rs, rt -> LO = quotient, HI = remainder (signed)
+							tmp = (r[rs] | 0) / (r[rt] | 0) | 0;
+							this.lo = (tmp + 4294967296) % 4294967296;
+							this.hi = (((r[rs] | 0) - tmp * (r[rt] | 0)) + 4294967296) % 4294967296;
 							break;
-						case 27: // divu
-							r[rd] = r[rs] / r[rt];
+						case 27: // divu rs, rt -> LO = quotient, HI = remainder (unsigned)
+							this.lo = Math.floor((r[rs] >>> 0) / (r[rt] >>> 0)) >>> 0;
+							this.hi = ((r[rs] >>> 0) % (r[rt] >>> 0)) >>> 0;
 							break;
 						case 32: // add rd, rs, rt with overflow check
 							// JavaScript casting trick here
@@ -842,7 +853,8 @@ var SimpleMIPS = (function (undefined) {
 			SLTU : 10,
 			NOP : 11,
 			MUL : 12,
-			DIV : 13
+			DIV : 13,
+			PASSB : 14
 		}, MEM_OP = {
 			NOP : 0,
 			RB  : 1,
@@ -971,6 +983,8 @@ var SimpleMIPS = (function (undefined) {
 			this.branchTarget = undefined;
 			this.registerFile[28] = 0x10008000; // $gp
 			this.registerFile[29] = 0x7ffffffc; // $sp
+			this.hi = 0;
+			this.lo = 0;
 		}
 
 		function _aStep() {
@@ -1205,6 +1219,9 @@ var SimpleMIPS = (function (undefined) {
 				case ALU_OP.DIV: // div
 					tmp = aluA/aluB;
 					break;
+				case ALU_OP.PASSB: // pass operand B through (used for mfhi/mflo)
+					tmp = aluB;
+					break;
 				case ALU_OP.NOP:
 				default: // pass through
 					tmp = aluA;
@@ -1299,37 +1316,95 @@ var SimpleMIPS = (function (undefined) {
 							// @TODO Break, current nop
 							exception |= EXCEPTION_CODE.BREAK;
 							break;
-						//case 16: // mfhi
-						//case 17: // mthi
-						//case 18: // mflo
-						//case 19: // mtlo
-						case 24: // mult
-							newAluOp = ALU_OP.MUL;
-							newOprASrc = rs;
-							newOprBSrc = rt;
-							newRegDst = rd;
-							newOvEn = true;
-							break;
-						case 25: // multu
-							newAluOp = ALU_OP.MUL;
-							newOprASrc = rs;
-							newOprBSrc = rt;
+						case 16: // mfhi rd
+							imm = self.hi;
+							newOprBSrc = 33;
+							newAluOp = ALU_OP.PASSB;
 							newRegDst = rd;
 							break;
-						case 26: // div
-							newAluOp = ALU_OP.DIV;
-							newOprASrc = rs;
-							newOprBSrc = rt;
-							newRegDst = rd;
-							newOvEn = true;
-							break;
-						case 27: // divu
-							newAluOp = ALU_OP.MUL;
-							newOprASrc = rs;
-							newOprBSrc = rt;
-							newRegDst = rd;
-							break;
-						case 32: // add rd, rs, rt with overflow check
+						case 17: // mthi rs
+						// Stall if preceding instruction in EX is writing rs
+						if (rs != 0 && rs == id_ex.regDst) {
+							stopPCUpdate = true;
+						} else if (rs != 0 && rs == curRegDstEXMA && curRegSrcEXMA == 0) {
+							self.hi = curAluOutEXMA;
+						} else if (rs != 0 && rs == curRegDstMAWB) {
+							self.hi = writtenRegisterValue;
+						} else {
+							self.hi = r[rs];
+						}
+						break;
+					case 18: // mflo rd
+						imm = self.lo;
+						newOprBSrc = 33;
+						newAluOp = ALU_OP.PASSB;
+						newRegDst = rd;
+						break;
+					case 19: // mtlo rs
+						// Stall if preceding instruction in EX is writing rs
+						if (rs != 0 && rs == id_ex.regDst) {
+							stopPCUpdate = true;
+						} else if (rs != 0 && rs == curRegDstEXMA && curRegSrcEXMA == 0) {
+							self.lo = curAluOutEXMA;
+						} else if (rs != 0 && rs == curRegDstMAWB) {
+							self.lo = writtenRegisterValue;
+						} else {
+							self.lo = r[rs];
+						}
+						break;
+					case 24: // mult rs, rt -> HI:LO = signed(rs) * signed(rt)
+						// Stall if preceding instruction (currently in EX) writes to rs or rt
+						if ((rs != 0 && rs == id_ex.regDst) || (rt != 0 && rt == id_ex.regDst)) {
+							stopPCUpdate = true;
+						} else {
+							aluA = (rs != 0 && rs == curRegDstEXMA && curRegSrcEXMA == 0) ? curAluOutEXMA :
+							       (rs != 0 && rs == curRegDstMAWB) ? writtenRegisterValue : r[rs];
+							aluB = (rt != 0 && rt == curRegDstEXMA && curRegSrcEXMA == 0) ? curAluOutEXMA :
+							       (rt != 0 && rt == curRegDstMAWB) ? writtenRegisterValue : r[rt];
+							tmp = (aluA | 0) * (aluB | 0);
+							self.lo = ((tmp % 4294967296) + 4294967296) % 4294967296;
+							self.hi = ((Math.floor(tmp / 4294967296)) + 4294967296) % 4294967296;
+						}
+						break;
+					case 25: // multu rs, rt -> HI:LO = unsigned(rs) * unsigned(rt)
+						if ((rs != 0 && rs == id_ex.regDst) || (rt != 0 && rt == id_ex.regDst)) {
+							stopPCUpdate = true;
+						} else {
+							aluA = (rs != 0 && rs == curRegDstEXMA && curRegSrcEXMA == 0) ? curAluOutEXMA :
+							       (rs != 0 && rs == curRegDstMAWB) ? writtenRegisterValue : r[rs];
+							aluB = (rt != 0 && rt == curRegDstEXMA && curRegSrcEXMA == 0) ? curAluOutEXMA :
+							       (rt != 0 && rt == curRegDstMAWB) ? writtenRegisterValue : r[rt];
+							tmp = (aluA >>> 0) * (aluB >>> 0);
+							self.lo = tmp >>> 0;
+							self.hi = Math.floor(tmp / 4294967296) >>> 0;
+						}
+						break;
+					case 26: // div rs, rt -> LO = quotient, HI = remainder (signed)
+						if ((rs != 0 && rs == id_ex.regDst) || (rt != 0 && rt == id_ex.regDst)) {
+							stopPCUpdate = true;
+						} else {
+							aluA = (rs != 0 && rs == curRegDstEXMA && curRegSrcEXMA == 0) ? curAluOutEXMA :
+							       (rs != 0 && rs == curRegDstMAWB) ? writtenRegisterValue : r[rs];
+							aluB = (rt != 0 && rt == curRegDstEXMA && curRegSrcEXMA == 0) ? curAluOutEXMA :
+							       (rt != 0 && rt == curRegDstMAWB) ? writtenRegisterValue : r[rt];
+							tmp = (aluA | 0) / (aluB | 0) | 0;
+							self.lo = (tmp + 4294967296) % 4294967296;
+							self.hi = (((aluA | 0) - tmp * (aluB | 0)) + 4294967296) % 4294967296;
+						}
+						break;
+					case 27: // divu rs, rt -> LO = quotient, HI = remainder (unsigned)
+						if ((rs != 0 && rs == id_ex.regDst) || (rt != 0 && rt == id_ex.regDst)) {
+							stopPCUpdate = true;
+						} else {
+							aluA = (rs != 0 && rs == curRegDstEXMA && curRegSrcEXMA == 0) ? curAluOutEXMA :
+							       (rs != 0 && rs == curRegDstMAWB) ? writtenRegisterValue : r[rs];
+							aluB = (rt != 0 && rt == curRegDstEXMA && curRegSrcEXMA == 0) ? curAluOutEXMA :
+							       (rt != 0 && rt == curRegDstMAWB) ? writtenRegisterValue : r[rt];
+							self.lo = Math.floor((aluA >>> 0) / (aluB >>> 0)) >>> 0;
+							self.hi = ((aluA >>> 0) % (aluB >>> 0)) >>> 0;
+						}
+						break;
+					case 32: // add rd, rs, rt with overflow check
 							newAluOp = ALU_OP.ADD;
 							newOprASrc = rs;
 							newOprBSrc = rt;
@@ -2463,6 +2538,29 @@ var SimpleMIPS = (function (undefined) {
 						throw new Error('Expecting 1 register operand and 1 immediate for ' + instName);
 					}
 					break;
+				case INST_TYPES.RR: // e.g. mult rs, rt
+					expectedTokens = tokenList.expect([
+						TOKEN_TYPES.REGOPR,
+						TOKEN_TYPES.COMMA,
+						TOKEN_TYPES.REGOPR
+					]);
+					if (expectedTokens) {
+						result.rs = expectedTokens[0].value;
+						result.rt = expectedTokens[2].value;
+					} else {
+						throw new Error('Expecting 2 register operands for ' + instName);
+					}
+					break;
+				case INST_TYPES.RD: // e.g. mfhi rd
+					expectedTokens = tokenList.expect([
+						TOKEN_TYPES.REGOPR
+					]);
+					if (expectedTokens) {
+						result.rd = expectedTokens[0].value;
+					} else {
+						throw new Error('Expecting 1 register operand for ' + instName);
+					}
+					break;
 				case INST_TYPES.R: // e.g. jr rs
 					expectedTokens = tokenList.expect([
 						TOKEN_TYPES.REGOPR,
@@ -2833,14 +2931,14 @@ var SimpleMIPS = (function (undefined) {
 						case 7: str = 'srav rd, rt, rs'; break;
 						case 8: str = 'jr rs'; break;
 						case 13: str = 'break'; break;
-						//case 16: // mfhi
-						//case 17: // mthi
-						//case 18: // mflo
-						//case 19: // mtlo
-						//case 24: // mult
-						//case 25: // multu
-						//case 26: // div
-						//case 27: // divu
+						case 16: str = 'mfhi rd'; break;
+						case 17: str = 'mthi rs'; break;
+						case 18: str = 'mflo rd'; break;
+						case 19: str = 'mtlo rs'; break;
+						case 24: str = 'mult rs, rt'; break;
+						case 25: str = 'multu rs, rt'; break;
+						case 26: str = 'div rs, rt'; break;
+						case 27: str = 'divu rs, rt'; break;
 						case 32: str = 'add rd, rs, rt'; break;
 						case 33: str = 'addu rd, rs, rt'; break;
 						case 34: str = 'sub rd, rs, rt'; break;

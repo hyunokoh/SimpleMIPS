@@ -5,6 +5,12 @@
 	<title>Basic MIPS Simulator in JavaScript (Pipeline Simulation)</title>
 	<link rel="stylesheet" href="normalize.css" media="all">
 	<link rel="stylesheet" href="style.css" media="all">
+	<style>
+#editor-wrapper{display:flex;margin-top:5px;width:100%;height:100%}
+#line-numbers{width:32px;min-width:32px;background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:3px 0 0 3px;padding:3px 4px 3px 2px;font-size:12px;font-family:'Courier New',monospace;color:#aaa;overflow:hidden;text-align:right;line-height:18px;user-select:none;cursor:default;box-sizing:border-box}
+#line-numbers span{display:block;line-height:18px}
+#input{flex:1;margin-top:0 !important;border-radius:0 3px 3px 0;font-size:12px;font-family:'Courier New',monospace;line-height:18px;resize:none;box-sizing:border-box;padding:3px}
+	</style>
 </head>
 <body>
 	
@@ -15,11 +21,16 @@
 				<fieldset id="src-field">
 					<legend>Assembly Source</legend>
 					<a href="javascript:void(0)" class="btn" id="btnAsm">Assemble &amp; Load</a>
+					<a href="javascript:void(0)" class="btn" id="btnSave">Save</a>
+					<a href="javascript:void(0)" class="btn" id="btnLoad">Load</a>
+					<input type="file" id="fileInput" accept=".asm,.s,.txt" style="display:none">
 					<a href="javascript:void(0)" class="btn" id="btnAsmHelp" style="display:none">?</a>
 					<span id="asmText"></span>
 					<br>
-					<textarea name="" id="input">
-					</textarea>
+					<div id="editor-wrapper">
+						<div id="line-numbers"><span>1</span></div>
+						<textarea name="" id="input"></textarea>
+					</div>
 					<div id="disassembly-window" style="display:none">
 						<p class="active">
 							<span class="addr">0x10000000:</span>
@@ -319,6 +330,10 @@
 		var exports = {};
 		// elements
 		var $btnAsm = $('#btnAsm'),
+			$btnSave = $('#btnSave'),
+			$btnLoad = $('#btnLoad'),
+			$fileInput = $('#fileInput'),
+			$lineNumbers = $('#line-numbers'),
 			$btnAsmHelp = $('#btnAsmHelp'),
 			$disassembly = $('#disassembly-window'),
 			$asmText = $('#asmText'),
@@ -366,6 +381,75 @@
 			$disassembly.html(html);
 			$lines = $disassembly.children();
 		}
+
+		// line numbers
+		function updateLineNumbers() {
+			var count = $input.val().split('\n').length;
+			var html = '';
+			for (var i = 1; i <= count; i++) { html += '<span>' + i + '</span>'; }
+			$lineNumbers.html(html);
+		}
+		$input.on('input', updateLineNumbers);
+		$input.on('scroll', function () { $lineNumbers[0].scrollTop = $input[0].scrollTop; });
+		updateLineNumbers();
+
+		// save / load
+		var currentFilename = '';
+
+		$btnSave.click(function () {
+			var content = $input.val();
+			var suggestedName = currentFilename || 'program.asm';
+			if (window.showSaveFilePicker) {
+				window.showSaveFilePicker({
+					suggestedName: suggestedName,
+					types: [{ description: 'MIPS Assembly', accept: { 'text/plain': ['.asm', '.s', '.txt'] } }]
+				}).then(function (fileHandle) {
+					currentFilename = fileHandle.name;
+					return fileHandle.createWritable();
+				}).then(function (writable) {
+					return writable.write(content).then(function () { return writable.close(); });
+				}).catch(function (err) {
+					if (err.name !== 'AbortError') outputField.log('[File]Save failed: ' + err.message, 'error');
+				});
+			} else {
+				var name = currentFilename;
+				if (!name) {
+					name = prompt('Save as:', suggestedName);
+					if (!name) return;
+					if (name.indexOf('.') === -1) name += '.asm';
+					currentFilename = name;
+				}
+				var blob = new Blob([content], { type: 'text/plain' });
+				var url = URL.createObjectURL(blob);
+				var a = document.createElement('a');
+				a.href = url; a.download = name;
+				document.body.appendChild(a); a.click();
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+			}
+		});
+
+		$btnLoad.click(function () {
+			if (CPUField.isProgramLoaded()) {
+				outputField.log('[File]Please go back to editing mode before loading a file.', 'warn');
+				return;
+			}
+			$fileInput[0].value = '';
+			$fileInput[0].click();
+		});
+
+		$fileInput.change(function () {
+			var file = this.files[0];
+			if (!file) return;
+			var reader = new FileReader();
+			reader.onload = function (e) {
+				$input.val(e.target.result);
+				updateLineNumbers();
+				currentFilename = file.name;
+				outputField.log('[File]Loaded: ' + file.name);
+			};
+			reader.readAsText(file);
+		});
 
 		// event handling
 		$btnAsm.click(function () {
