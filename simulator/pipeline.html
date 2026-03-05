@@ -5,17 +5,11 @@
 	<title>Basic MIPS Simulator in JavaScript (Pipeline Simulation)</title>
 	<link rel="stylesheet" href="normalize.css" media="all">
 	<link rel="stylesheet" href="style.css" media="all">
-	<style>
-#editor-wrapper{display:flex;margin-top:5px;width:100%;height:100%}
-#line-numbers{width:32px;min-width:32px;background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:3px 0 0 3px;padding:3px 4px 3px 2px;font-size:12px;font-family:'Courier New',monospace;color:#aaa;overflow:hidden;text-align:right;line-height:18px;user-select:none;cursor:default;box-sizing:border-box}
-#line-numbers span{display:block;line-height:18px}
-#input{flex:1;margin-top:0 !important;border-radius:0 3px 3px 0;font-size:12px;font-family:'Courier New',monospace;line-height:18px;resize:none;box-sizing:border-box;padding:3px}
-	</style>
 </head>
 <body>
-	
+
 	<div id="layout">
-		<h2>Basic MIPS Simulator in JavaScript (Pipeline Simulation)<small> extened</small></h2>
+		<h2>Basic MIPS Simulator in JavaScript (Pipeline Simulation)<small> extended</small></h2>
 		<div id="top-controls" class="clearfix">
 			<div class="top_grid">
 				<fieldset id="src-field">
@@ -24,12 +18,23 @@
 					<a href="javascript:void(0)" class="btn" id="btnSave">Save</a>
 					<a href="javascript:void(0)" class="btn" id="btnLoad">Load</a>
 					<input type="file" id="fileInput" accept=".asm,.s,.txt" style="display:none">
+					<select id="exampleSelect" style="margin-left:4px;font-size:12px;border:1px solid #ccc;border-radius:3px;padding:2px">
+					  <option value="">-- Examples --</option>
+					  <option value="print">Hello World</option>
+					  <option value="arithmetic">Arithmetic</option>
+					  <option value="loop">Loop (1~10 sum)</option>
+					  <option value="jal">Subroutine (jal/jr)</option>
+					  <option value="array">Array Sum</option>
+					</select>
 					<a href="javascript:void(0)" class="btn" id="btnAsmHelp" style="display:none">?</a>
 					<span id="asmText"></span>
 					<br>
 					<div id="editor-wrapper">
 						<div id="line-numbers"><span>1</span></div>
-						<textarea name="" id="input"></textarea>
+						<div id="editor-area">
+							<pre id="highlight-mirror"></pre>
+							<textarea name="" id="input"></textarea>
+						</div>
 					</div>
 					<div id="disassembly-window" style="display:none">
 						<p class="active">
@@ -61,102 +66,23 @@
 								<td class="label">Stall</td>
 								<td class="content" id="stallText">0</td>
 							</tr>
-							<tr>
-								<td class="label">r0 / zero</td>
-								<td class="content" id="r0Text">0x00000000</td>
-								<td class="label">r16 / s0</td>
-								<td class="content" id="r16Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r1 / at</td>
-								<td class="content" id="r1Text">0x00000000</td>
-								<td class="label">r17 / s1</td>
-								<td class="content" id="r17Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r2 / v0</td>
-								<td class="content" id="r2Text">0x00000000</td>
-								<td class="label">r18 / s2</td>
-								<td class="content" id="r18Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r3 / v1</td>
-								<td class="content" id="r3Text">0x00000000</td>
-								<td class="label">r19 / s3</td>
-								<td class="content" id="r19Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r4 / a0</td>
-								<td class="content" id="r4Text">0x00000000</td>
-								<td class="label">r20 / s4</td>
-								<td class="content" id="r20Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r5 / a1</td>
-								<td class="content" id="r5Text">0x00000000</td>
-								<td class="label">r21 / s5</td>
-								<td class="content" id="r21Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r6 / a2</td>
-								<td class="content" id="r6Text">0x00000000</td>
-								<td class="label">r22 / s6</td>
-								<td class="content" id="r22Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r7 / a3</td>
-								<td class="content" id="r7Text">0x00000000</td>
-								<td class="label">r23 / s7</td>
-								<td class="content" id="r23Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r8 / t0</td>
-								<td class="content" id="r8Text">0x00000000</td>
-								<td class="label">r24 / t8</td>
-								<td class="content" id="r24Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r9 / t1</td>
-								<td class="content" id="r9Text">0x00000000</td>
-								<td class="label">r25 / t9</td>
-								<td class="content" id="r25Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r10 / t2</td>
-								<td class="content" id="r10Text">0x00000000</td>
-								<td class="label">r26 / k0</td>
-								<td class="content" id="r26Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r11 / t3</td>
-								<td class="content" id="r11Text">0x00000000</td>
-								<td class="label">r27 / k1</td>
-								<td class="content" id="r27Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r12 / t4</td>
-								<td class="content" id="r12Text">0x00000000</td>
-								<td class="label">r28 / gp</td>
-								<td class="content" id="r28Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r13 / t5</td>
-								<td class="content" id="r13Text">0x00000000</td>
-								<td class="label">r29 / sp</td>
-								<td class="content" id="r29Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r14 / t6</td>
-								<td class="content" id="r14Text">0x00000000</td>
-								<td class="label">r30 / fp</td>
-								<td class="content" id="r30Text">0x00000000</td>
-							</tr>
-							<tr>
-								<td class="label">r15 / t7</td>
-								<td class="content" id="r15Text">0x00000000</td>
-								<td class="label">r31 / ra</td>
-								<td class="content" id="r31Text">0x00000000</td>
-							</tr>
+							<tr><td class="label">r0 / zero</td><td class="content" id="r0Text">0x00000000</td><td class="label">r16 / s0</td><td class="content" id="r16Text">0x00000000</td></tr>
+							<tr><td class="label">r1 / at</td><td class="content" id="r1Text">0x00000000</td><td class="label">r17 / s1</td><td class="content" id="r17Text">0x00000000</td></tr>
+							<tr><td class="label">r2 / v0</td><td class="content" id="r2Text">0x00000000</td><td class="label">r18 / s2</td><td class="content" id="r18Text">0x00000000</td></tr>
+							<tr><td class="label">r3 / v1</td><td class="content" id="r3Text">0x00000000</td><td class="label">r19 / s3</td><td class="content" id="r19Text">0x00000000</td></tr>
+							<tr><td class="label">r4 / a0</td><td class="content" id="r4Text">0x00000000</td><td class="label">r20 / s4</td><td class="content" id="r20Text">0x00000000</td></tr>
+							<tr><td class="label">r5 / a1</td><td class="content" id="r5Text">0x00000000</td><td class="label">r21 / s5</td><td class="content" id="r21Text">0x00000000</td></tr>
+							<tr><td class="label">r6 / a2</td><td class="content" id="r6Text">0x00000000</td><td class="label">r22 / s6</td><td class="content" id="r22Text">0x00000000</td></tr>
+							<tr><td class="label">r7 / a3</td><td class="content" id="r7Text">0x00000000</td><td class="label">r23 / s7</td><td class="content" id="r23Text">0x00000000</td></tr>
+							<tr><td class="label">r8 / t0</td><td class="content" id="r8Text">0x00000000</td><td class="label">r24 / t8</td><td class="content" id="r24Text">0x00000000</td></tr>
+							<tr><td class="label">r9 / t1</td><td class="content" id="r9Text">0x00000000</td><td class="label">r25 / t9</td><td class="content" id="r25Text">0x00000000</td></tr>
+							<tr><td class="label">r10 / t2</td><td class="content" id="r10Text">0x00000000</td><td class="label">r26 / k0</td><td class="content" id="r26Text">0x00000000</td></tr>
+							<tr><td class="label">r11 / t3</td><td class="content" id="r11Text">0x00000000</td><td class="label">r27 / k1</td><td class="content" id="r27Text">0x00000000</td></tr>
+							<tr><td class="label">r12 / t4</td><td class="content" id="r12Text">0x00000000</td><td class="label">r28 / gp</td><td class="content" id="r28Text">0x00000000</td></tr>
+							<tr><td class="label">r13 / t5</td><td class="content" id="r13Text">0x00000000</td><td class="label">r29 / sp</td><td class="content" id="r29Text">0x00000000</td></tr>
+							<tr><td class="label">r14 / t6</td><td class="content" id="r14Text">0x00000000</td><td class="label">r30 / fp</td><td class="content" id="r30Text">0x00000000</td></tr>
+							<tr><td class="label">r15 / t7</td><td class="content" id="r15Text">0x00000000</td><td class="label">r31 / ra</td><td class="content" id="r31Text">0x00000000</td></tr>
+							<tr><td class="label">HI</td><td class="content" id="hiText">0x00000000</td><td class="label">LO</td><td class="content" id="loText">0x00000000</td></tr>
 						</table>
 						<div class="radio-box">
 							<label for="">Register Value Format : </label>
@@ -268,11 +194,15 @@
 				<div id="output-window"></div>
 				<a href="javascript:void(0)" class="btn f-right" id="btnClear">Clear</a>
 			</fieldset>
+			<fieldset id="stack-field">
+				<legend>Stack ($sp)</legend>
+				<div id="stack-window"></div>
+			</fieldset>
 		</div>
 	</div>
-	
-	
-	
+
+
+
 	<script src="jquery-1.7.min.js"></script>
 	<script src="simpleMIPS.js"></script>
 	<script>
@@ -282,133 +212,285 @@
 		log('[BROWSER]Uint32Array is not supported. Please use Chrome, Safari, Firefox or IE10+.')
 		return;
 	}
-	// global event bus
 	var eventBus = new SimpleMIPS.EventBus();
 
-	// simulator initialization
 	var MEMORY_BUFFER_SIZE = 22*3*4,
-		mem = new SimpleMIPS.Memory(),
-		cpu = new SimpleMIPS.CPU.Core(mem, SimpleMIPS.CPU.SIM_MODE.ACCURATE),
-		exCode = SimpleMIPS.CPU.EXCEPTION_CODE,
-		assembler = SimpleMIPS.Assembler;
-
-	//window.cpu = cpu;
+		mem        = new SimpleMIPS.Memory(),
+		cpu        = new SimpleMIPS.CPU.Core(mem, SimpleMIPS.CPU.SIM_MODE.ACCURATE),
+		exCode     = SimpleMIPS.CPU.EXCEPTION_CODE,
+		assembler  = SimpleMIPS.Assembler;
 
 	cpu.eventBus.register('print', function (src, type, val) {
 		switch (type) {
-			case 's':
-				outputField.log('[CPU]' + val, 'info');
-				break;
-			default:
-				outputField.log('[CPU]' + src + ' = 0x' + val.toString(16), 'info');
+			case 's': outputField.log('[CPU]' + val, 'info'); break;
+			default:  outputField.log('[CPU]' + src + ' = 0x' + val.toString(16), 'info');
 		}
 	});
 
 	// global utils
 	function formatHex(n, len) {
 		len = len || 8;
-		var str = n.toString(16),
-			l = len - str.length;
+		var str = n.toString(16), l = len - str.length;
 		if (l <= 0) return '0x' + str;
-		for (var i = 0;i < l;i++) {
-			str = '0' + str;
-		}
+		for (var i = 0; i < l; i++) str = '0' + str;
 		return '0x' + str;
 	}
-
 	function formatByte(n) {
 		var str = n.toString(16);
-		if (str.length == 1) {
-			return '0' + str;
-		} else {
-			return str;
-		}
+		return str.length == 1 ? '0' + str : str;
+	}
+	function escHtml(s) {
+		return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 	}
 
-	// assembly field
+	// outer-scope shared state
+	var breakpoints = {};
+	function pcToLine(pc, asmResult) {
+		if (!asmResult || !asmResult.sourceMap) return null;
+		return asmResult.sourceMap[(pc - asmResult.textStart) >> 2] || null;
+	}
+
+	// ── assemblyField ─────────────────────────────────────────────
 	var assemblyField = (function (eventBus) {
 		var exports = {};
-		// elements
-		var $btnAsm = $('#btnAsm'),
-			$btnSave = $('#btnSave'),
-			$btnLoad = $('#btnLoad'),
-			$fileInput = $('#fileInput'),
+		var $btnAsm      = $('#btnAsm'),
+			$btnSave     = $('#btnSave'),
+			$btnLoad     = $('#btnLoad'),
+			$fileInput   = $('#fileInput'),
+			$exampleSel  = $('#exampleSelect'),
 			$lineNumbers = $('#line-numbers'),
-			$btnAsmHelp = $('#btnAsmHelp'),
+			$mirror      = $('#highlight-mirror'),
+			$btnAsmHelp  = $('#btnAsmHelp'),
 			$disassembly = $('#disassembly-window'),
-			$asmText = $('#asmText'),
-			$input = $('#input'),
+			$asmText     = $('#asmText'),
+			$input       = $('#input'),
 			$lines;
-		// vars
 		var asmResult,
 			lIF, lID, lEX, lMA, lWB,
-			plIF = 0, plID = 0, plEX = 0, plMA = 0, plWB = 0;
+			plIF = 0, plID = 0, plEX = 0, plMA = 0, plWB = 0,
+			errorLine     = null,
+			currentFilename = '';
 
+		// disassembly
 		function updateDisassemblyWindow() {
-			if (!asmResult||!asmResult.sourceMap) {
+			if (!asmResult || !asmResult.sourceMap) {
 				$disassembly.children().removeClass('active if id ex ma wb');
 				return;
 			}
-			lIF = asmResult.sourceMap[(cpu.if_id.pc - asmResult.textStart) >> 2],
-			lID = asmResult.sourceMap[(cpu.id_ex.pc - asmResult.textStart) >> 2],
-			lEX = asmResult.sourceMap[(cpu.ex_ma.pc - asmResult.textStart) >> 2],
-			lMA = asmResult.sourceMap[(cpu.ma_wb.pc - asmResult.textStart) >> 2],
+			lIF = asmResult.sourceMap[(cpu.if_id.pc  - asmResult.textStart) >> 2];
+			lID = asmResult.sourceMap[(cpu.id_ex.pc  - asmResult.textStart) >> 2];
+			lEX = asmResult.sourceMap[(cpu.ex_ma.pc  - asmResult.textStart) >> 2];
+			lMA = asmResult.sourceMap[(cpu.ma_wb.pc  - asmResult.textStart) >> 2];
 			lWB = asmResult.sourceMap[(cpu.retiredPC - asmResult.textStart) >> 2];
-			if (plIF > 0) { $lines.eq(plIF - 1).attr('class', ''); }
-			if (plID > 0) { $lines.eq(plID - 1).attr('class', ''); }
-			if (plEX > 0) { $lines.eq(plEX - 1).attr('class', ''); }
-			if (plMA > 0) { $lines.eq(plMA - 1).attr('class', ''); }
-			if (plWB > 0) { $lines.eq(plWB - 1).attr('class', ''); }
-			if (lWB > 0) { $lines.eq(lWB-1).addClass('wb'); }
-			if (lMA > 0) { $lines.eq(lMA-1).addClass('ma'); }
-			if (lEX > 0) { $lines.eq(lEX-1).addClass('ex'); }
-			if (lID > 0) { $lines.eq(lID-1).addClass('id'); }
-			if (lIF > 0) { $lines.eq(lIF-1).addClass('if'); }
-			plIF = lIF;
-			plID = lID;
-			plEX = lEX;
-			plMA = lMA;
-			plWB = lWB;
+			if (plIF > 0) $lines.eq(plIF-1).attr('class','');
+			if (plID > 0) $lines.eq(plID-1).attr('class','');
+			if (plEX > 0) $lines.eq(plEX-1).attr('class','');
+			if (plMA > 0) $lines.eq(plMA-1).attr('class','');
+			if (plWB > 0) $lines.eq(plWB-1).attr('class','');
+			if (lWB > 0) $lines.eq(lWB-1).addClass('wb');
+			if (lMA > 0) $lines.eq(lMA-1).addClass('ma');
+			if (lEX > 0) $lines.eq(lEX-1).addClass('ex');
+			if (lID > 0) $lines.eq(lID-1).addClass('id');
+			if (lIF > 0) $lines.eq(lIF-1).addClass('if');
+			plIF = lIF; plID = lID; plEX = lEX; plMA = lMA; plWB = lWB;
 		}
 
 		function initDisassemblyWindow() {
 			$disassembly.empty();
-			var lines = $input.val().split('\n'),
-				html = '';
-			for (var i = 0, n = lines.length;i < n;i++) {
-				html += '<p><span class="addr">$1</span><span class="content">$2</span></p>'.replace('$1', i+1).replace('$2', lines[i]);
-			}
+			var lines = $input.val().split('\n'), html = '';
+			for (var i = 0; i < lines.length; i++)
+				html += '<p><span class="addr">' + (i+1) + '</span>'
+				      + '<span class="content">' + escHtml(lines[i]) + '</span></p>';
 			$disassembly.html(html);
 			$lines = $disassembly.children();
 		}
 
+		// syntax highlighting
+		var INST_SET = {add:1,addu:1,addi:1,addiu:1,sub:1,subu:1,mult:1,multu:1,div:1,divu:1,
+			and:1,andi:1,or:1,ori:1,xor:1,xori:1,nor:1,sll:1,sllv:1,srl:1,sra:1,srlv:1,srav:1,
+			slt:1,slti:1,sltu:1,sltiu:1,lw:1,lb:1,lbu:1,lh:1,lhu:1,lui:1,sw:1,sb:1,sh:1,
+			beq:1,bne:1,blez:1,bgtz:1,bltz:1,bgez:1,bltzal:1,bgezal:1,j:1,jr:1,jal:1,jalr:1,
+			mfhi:1,mflo:1,mthi:1,mtlo:1,nop:1,break:1,syscall:1,print:1,prints:1,printm:1,
+			la:1,li:1,pushr:1,popr:1};
+		var DIR_SET = {'.text':1,'.data':1,'.word':1,'.byte':1,'.half':1,
+			'.space':1,'.asciiz':1,'.align':1,'.globl':1};
+
+		function highlightLine(line) {
+			var out = '', i = 0, n = line.length;
+			while (i < n) {
+				var c = line[i];
+				if (c === '#') { out += '<span class="asm-comment">' + escHtml(line.slice(i)) + '</span>'; break; }
+				if (c === '$') {
+					var j = i+1; while (j < n && /\w/.test(line[j])) j++;
+					out += '<span class="asm-reg">' + escHtml(line.slice(i,j)) + '</span>';
+					i = j; continue;
+				}
+				if (c === '0' && line[i+1] === 'x') {
+					var j = i+2; while (j < n && /[0-9a-fA-F]/.test(line[j])) j++;
+					out += '<span class="asm-num">' + escHtml(line.slice(i,j)) + '</span>';
+					i = j; continue;
+				}
+				if (/[0-9]/.test(c) || (c==='-' && i+1<n && /[0-9]/.test(line[i+1]))) {
+					var j = i+(c==='-'?1:0); while (j < n && /[0-9]/.test(line[j])) j++;
+					out += '<span class="asm-num">' + escHtml(line.slice(i,j)) + '</span>';
+					i = j; continue;
+				}
+				if (c === '.' || /[a-zA-Z_]/.test(c)) {
+					var j = i+1; while (j < n && /[\w.]/.test(line[j])) j++;
+					var word = line.slice(i,j), esc = escHtml(word);
+					if (j < n && line[j] === ':') { out += '<span class="asm-label">'+esc+':</span>'; i = j+1; }
+					else if (DIR_SET[word.toLowerCase()])  { out += '<span class="asm-dir">'+esc+'</span>'; i = j; }
+					else if (INST_SET[word.toLowerCase()]) { out += '<span class="asm-inst">'+esc+'</span>'; i = j; }
+					else { out += esc; i = j; }
+					continue;
+				}
+				out += escHtml(c); i++;
+			}
+			return out;
+		}
+
+		function updateHighlight() {
+			var lines = $input.val().split('\n');
+			var html = lines.map(function(line, idx) {
+				var h = highlightLine(line);
+				if (errorLine !== null && idx+1 === errorLine)
+					return '<span class="hl-error-line">' + h + '</span>';
+				return h;
+			}).join('\n') + '\n';
+			$mirror.html(html);
+			$mirror[0].scrollTop  = $input[0].scrollTop;
+			$mirror[0].scrollLeft = $input[0].scrollLeft;
+		}
+
+		function clearError() {
+			errorLine = null;
+			$lineNumbers.find('span.error-line').removeClass('error-line');
+		}
+
 		// line numbers
 		function updateLineNumbers() {
-			var count = $input.val().split('\n').length;
-			var html = '';
-			for (var i = 1; i <= count; i++) { html += '<span>' + i + '</span>'; }
+			var count = $input.val().split('\n').length, html = '';
+			for (var i = 1; i <= count; i++) html += '<span>' + i + '</span>';
 			$lineNumbers.html(html);
+			$.each(breakpoints, function(lineNo) {
+				$lineNumbers.find('span').eq(+lineNo - 1).addClass('bp-dot');
+			});
+			if (errorLine !== null)
+				$lineNumbers.find('span').eq(errorLine - 1).addClass('error-line');
 		}
-		$input.on('input', updateLineNumbers);
-		$input.on('scroll', function () { $lineNumbers[0].scrollTop = $input[0].scrollTop; });
+
+		// breakpoint toggle on line-number click
+		$lineNumbers.on('click', 'span', function() {
+			var $s = $(this), lineNo = parseInt($s.text(), 10);
+			if (isNaN(lineNo)) return;
+			if (breakpoints[lineNo]) { delete breakpoints[lineNo]; $s.removeClass('bp-dot'); }
+			else                     { breakpoints[lineNo] = true;  $s.addClass('bp-dot'); }
+		});
+
+		$input.on('input', function() { clearError(); updateLineNumbers(); updateHighlight(); });
+		$input.on('scroll', function() {
+			$lineNumbers[0].scrollTop = $input[0].scrollTop;
+			$mirror[0].scrollTop  = $input[0].scrollTop;
+			$mirror[0].scrollLeft = $input[0].scrollLeft;
+		});
 		updateLineNumbers();
+		updateHighlight();
+
+		// examples
+		var EXAMPLES = {
+print: [
+'# Hello World: print register values',
+'ori  $t0, $zero, 65    # $t0 = 65',
+'ori  $t1, $zero, 31    # $t1 = 31',
+'add  $t2, $t0, $t1     # $t2 = 96',
+'print $t0              # print $t0',
+'print $t1              # print $t1',
+'print $t2              # print $t2',
+'nop'].join('\n'),
+
+arithmetic: [
+'# Arithmetic operations',
+'ori  $t0, $zero, 15    # $t0 = 15',
+'ori  $t1, $zero, 4     # $t1 = 4',
+'add  $t2, $t0, $t1     # $t2 = 19  (add)',
+'sub  $t3, $t0, $t1     # $t3 = 11  (sub)',
+'mult $t0, $t1          # HI:LO = 60',
+'mflo $t4               # $t4 = 60  (lower)',
+'div  $t0, $t1          # LO=3 HI=3',
+'mflo $t5               # $t5 = 3   (quotient)',
+'mfhi $t6               # $t6 = 3   (remainder)',
+'nop'].join('\n'),
+
+loop: [
+'# Loop: sum 1 to 10',
+'ori  $t0, $zero, 0     # sum = 0',
+'ori  $t1, $zero, 1     # i = 1',
+'ori  $t2, $zero, 11    # limit = 11',
+'loop:',
+'add  $t0, $t0, $t1     # sum += i',
+'addi $t1, $t1, 1       # i++',
+'bne  $t1, $t2, loop    # if i != 11, repeat',
+'nop                    # delay slot',
+'print $t0              # print sum (55)',
+'nop'].join('\n'),
+
+jal: [
+'# Subroutine call with jal/jr',
+'ori  $a0, $zero, 7     # arg: n = 7',
+'jal  double            # call double(n)',
+'nop                    # delay slot',
+'print $v0              # print result (14)',
+'break',
+'',
+'# double(n): returns n*2 in $v0',
+'double:',
+'add  $v0, $a0, $a0    # $v0 = n * 2',
+'jr   $ra              # return',
+'nop                   # delay slot'].join('\n'),
+
+array: [
+'# Array sum',
+'.data',
+'arr: .word 10, 20, 30, 40, 50',
+'.text',
+'la   $t0, arr          # base address',
+'ori  $t1, $zero, 5     # count = 5',
+'ori  $t2, $zero, 0     # sum = 0',
+'ori  $t3, $zero, 0     # i = 0',
+'loop:',
+'lw   $t4, 0($t0)       # load arr[i]',
+'add  $t2, $t2, $t4     # sum += arr[i]',
+'addi $t0, $t0, 4       # next element',
+'addi $t3, $t3, 1       # i++',
+'bne  $t3, $t1, loop    # if i != 5, repeat',
+'nop                    # delay slot',
+'print $t2              # print sum (150)',
+'nop'].join('\n')
+		};
+
+		$exampleSel.change(function() {
+			if (CPUField.isProgramLoaded()) {
+				outputField.log('[File]Go back to editing mode first.', 'warn');
+				this.value = ''; return;
+			}
+			var key = this.value; this.value = '';
+			if (!key || !EXAMPLES[key]) return;
+			$input.val(EXAMPLES[key]);
+			clearError(); updateLineNumbers(); updateHighlight();
+		});
 
 		// save / load
-		var currentFilename = '';
-
 		$btnSave.click(function () {
-			var content = $input.val();
-			var suggestedName = currentFilename || 'program.asm';
+			var content = $input.val(), suggestedName = currentFilename || 'program.asm';
 			if (window.showSaveFilePicker) {
 				window.showSaveFilePicker({
 					suggestedName: suggestedName,
-					types: [{ description: 'MIPS Assembly', accept: { 'text/plain': ['.asm', '.s', '.txt'] } }]
-				}).then(function (fileHandle) {
-					currentFilename = fileHandle.name;
-					return fileHandle.createWritable();
-				}).then(function (writable) {
-					return writable.write(content).then(function () { return writable.close(); });
-				}).catch(function (err) {
+					types: [{ description: 'MIPS Assembly', accept: { 'text/plain': ['.asm','.s','.txt'] } }]
+				}).then(function(fh) {
+					currentFilename = fh.name; return fh.createWritable();
+				}).then(function(w) {
+					return w.write(content).then(function(){ return w.close(); });
+				}).catch(function(err) {
 					if (err.name !== 'AbortError') outputField.log('[File]Save failed: ' + err.message, 'error');
 				});
 			} else {
@@ -419,151 +501,153 @@
 					if (name.indexOf('.') === -1) name += '.asm';
 					currentFilename = name;
 				}
-				var blob = new Blob([content], { type: 'text/plain' });
+				var blob = new Blob([content], { type:'text/plain' });
 				var url = URL.createObjectURL(blob);
 				var a = document.createElement('a');
 				a.href = url; a.download = name;
 				document.body.appendChild(a); a.click();
-				document.body.removeChild(a);
-				URL.revokeObjectURL(url);
+				document.body.removeChild(a); URL.revokeObjectURL(url);
 			}
 		});
 
 		$btnLoad.click(function () {
 			if (CPUField.isProgramLoaded()) {
-				outputField.log('[File]Please go back to editing mode before loading a file.', 'warn');
-				return;
+				outputField.log('[File]Go back to editing mode first.', 'warn'); return;
 			}
-			$fileInput[0].value = '';
-			$fileInput[0].click();
+			$fileInput[0].value = ''; $fileInput[0].click();
 		});
 
 		$fileInput.change(function () {
-			var file = this.files[0];
-			if (!file) return;
+			var file = this.files[0]; if (!file) return;
 			var reader = new FileReader();
-			reader.onload = function (e) {
+			reader.onload = function(e) {
 				$input.val(e.target.result);
-				updateLineNumbers();
 				currentFilename = file.name;
+				clearError(); updateLineNumbers(); updateHighlight();
 				outputField.log('[File]Loaded: ' + file.name);
 			};
 			reader.readAsText(file);
 		});
 
-		// event handling
+		// assemble button
 		$btnAsm.click(function () {
 			if (CPUField.isProgramLoaded()) {
-				// switch back to edit mode
 				$disassembly.empty().hide();
-				$input.show();
+				$('#editor-wrapper').show();
 				$btnAsmHelp.hide();
 				$btnAsm.text('Assemble & Load');
 				$asmText.text('');
 				eventBus.post('programUnloaded');
 			} else {
-				// assemble and load
 				try {
 					asmResult = assembler.assemble($input.val());
-					$input.hide();
+					$('#editor-wrapper').hide();
 					$disassembly.show();
 					$btnAsmHelp.show();
 					$btnAsm.text('Go Back Editing');
+					clearError();
 					initDisassemblyWindow();
 					eventBus.post('programAssembled', asmResult);
 					eventBus.post('cpuUpdate');
-					outputField.log('[Assembler]Codesize:' + asmResult.textSize + ' ' + 'Datasize:' + asmResult.dataSize);
+					outputField.log('[Assembler]Codesize:' + asmResult.textSize + ' Datasize:' + asmResult.dataSize);
 				} catch (err) {
+					var match = err.message.match(/^L(\d+):/);
+					errorLine = match ? parseInt(match[1], 10) : null;
+					updateLineNumbers();
+					updateHighlight();
 					outputField.log('[Assembler]' + err.message, 'error');
 				}
 			}
 		});
 
 		$btnAsmHelp.click(function () {
-			outputField.info('[Help]The colored indicator before each line implies the next pipeline stage it will finish. Note that for pseudo instruction, this indication may not be correct as pseudo instructions are expanded to several CPU instructions.')
+			outputField.info('[Help]The colored indicator before each line implies the next pipeline stage it will finish.');
 		});
 
 		eventBus.register('cpuUpdate', updateDisassemblyWindow);
-
 		return exports;
 	})(eventBus);
 
-	// cpu field
+	// ── CPUField ──────────────────────────────────────────────────
 	var CPUField = (function (eventBus) {
 		var exports = {};
-		// elements
-		var $btnStep = $('#btnStep'),
-			$btnRun = $('#btnRun'),
-			$btnReset = $('#btnReset'),
+		var $btnStep           = $('#btnStep'),
+			$btnRun            = $('#btnRun'),
+			$btnReset          = $('#btnReset'),
 			$btnToggleStatusView = $('#btnToggleStatusView'),
-			$registerView = $('#reg-status'),
-			$pipelineView = $('#pipeline-status'),
-			$regFormatHex = $('#regFormatHex'),
-			$regFormatDec = $('#regFormatDec'),
-			$cpuText = $('#cpuText'),
-			$stallText = $('#stallText'),
-		 	$pcText = $('#pcText'),
-			$cycleText = $('#cycleText'),
-			$instText = $('#instText');
-			$registers = [0 ,1 ,2 ,3 ,4 ,5 ,6 ,7 ,8 ,9 ,10,11,12,13,14,15,
-						16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31].map(function (x) {
-							return $('#r' + x + 'Text');
-						});
-		var $pIF      = $('#pIF legend'),
-			$pID      = $('#pID legend'),
-			$pcIF     = $('#pIF .v-pc'),     $instIF = $('#pIF .v-inst'),
-			$pcID     = $('#pID .v-pc'),     $instID = $('#pID .v-inst'),
-			$pcEX     = $('#pEX .v-pc'),     $instEX = $('#pEX .v-inst'),
-			$pcMA     = $('#pMA .v-pc'),     $instMA = $('#pMA .v-inst'),
-			$pcWB     = $('#pWB .v-pc'),     $instWB = $('#pWB .v-inst'),
-			$bCond    = $('#pID .v-bCond'),
-			$bTaken   = $('#pID .v-bTaken'),
-			$bCondAVal= $('#pID .v-bCondAVal'),
-			$bCondBVal= $('#pID .v-bCondBVal'),
-			$bCondASrc= $('#pID .v-bCondASrc'),
-			$bCondBSrc= $('#pID .v-bCondBSrc'),
-			$bBaseSrc = $('#pID .v-bBaseSrc'),
-			$bTarget  = $('#pID .v-bTarget'),
-			$memWVal  = $('#pID .v-memWVal'),
-			$memWSrc  = $('#pID .v-memWSrc'),
-			$aluOp    = $('#pEX .v-aluOp'),
-			$aluA     = $('#pEX .v-aluA'),
-			$aluB     = $('#pEX .v-aluB'),
-			$aluASrc  = $('#pEX .v-aluASrc'),
-			$aluBSrc  = $('#pEX .v-aluBSrc'),
-			$memOp    = $('#pMA .v-memOp'),
-			$memAddr  = $('#pMA .v-memAddr'),
-			$memVal   = $('#pMA .v-memVal'),
-			$regOp    = $('#pWB .v-regOp'),
-			$regSrc   = $('#pWB .v-regSrc'),
-			$regDst   = $('#pWB .v-regDst'),
-			$regVal   = $('#pWB .v-regVal');
-		// vars
-		var loaded = false,
-			freeRunning = false,
-			timer,
-			lastPC = 0x00000000,
-			lastInst = 0x00000000,
-			curPC = 0x00000000,
-			curInst = 0x00000000,
+			$registerView      = $('#reg-status'),
+			$pipelineView      = $('#pipeline-status'),
+			$regFormatHex      = $('#regFormatHex'),
+			$regFormatDec      = $('#regFormatDec'),
+			$cpuText           = $('#cpuText'),
+			$stallText         = $('#stallText'),
+			$pcText            = $('#pcText'),
+			$cycleText         = $('#cycleText'),
+			$instText          = $('#instText'),
+			$stackWindow       = $('#stack-window'),
+			$hiText            = $('#hiText'),
+			$loText            = $('#loText');
+		var $registers = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+		                  16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31].map(function(x){
+			return $('#r' + x + 'Text');
+		});
+		var $pIF     = $('#pIF legend'), $pID = $('#pID legend'),
+			$instIF  = $('#pIF .v-inst'), $instID = $('#pID .v-inst'),
+			$instEX  = $('#pEX .v-inst'), $instMA = $('#pMA .v-inst'), $instWB = $('#pWB .v-inst'),
+			$bCond   = $('#pID .v-bCond'),   $bTaken    = $('#pID .v-bTaken'),
+			$bCondAVal=$('#pID .v-bCondAVal'),$bCondBVal=$('#pID .v-bCondBVal'),
+			$bCondASrc=$('#pID .v-bCondASrc'),$bCondBSrc=$('#pID .v-bCondBSrc'),
+			$bBaseSrc= $('#pID .v-bBaseSrc'), $bTarget  = $('#pID .v-bTarget'),
+			$memWVal = $('#pID .v-memWVal'),  $memWSrc  = $('#pID .v-memWSrc'),
+			$aluOp   = $('#pEX .v-aluOp'),
+			$aluA    = $('#pEX .v-aluA'),     $aluB     = $('#pEX .v-aluB'),
+			$aluASrc = $('#pEX .v-aluASrc'),  $aluBSrc  = $('#pEX .v-aluBSrc'),
+			$memOp   = $('#pMA .v-memOp'),    $memAddr  = $('#pMA .v-memAddr'), $memVal = $('#pMA .v-memVal'),
+			$regOp   = $('#pWB .v-regOp'),    $regSrc   = $('#pWB .v-regSrc'),
+			$regDst  = $('#pWB .v-regDst'),   $regVal   = $('#pWB .v-regVal');
+
+		var loaded = false, freeRunning = false, timer,
 			registerValueFormat = 'hex',
-			curRegisterFile = new Uint32Array(32),
+			curRegisterFile  = new Uint32Array(32),
 			lastRegisterFile = new Uint32Array(32),
-			STALL_FLAGS = SimpleMIPS.CPU.STALL_FLAGS,
-			ALU_OP = SimpleMIPS.CPU.ALU_OP,
-			MEM_OP = SimpleMIPS.CPU.MEM_OP,
-			BRANCH_COND = SimpleMIPS.CPU.BRANCH_COND;
+			STALL_FLAGS  = SimpleMIPS.CPU.STALL_FLAGS,
+			ALU_OP       = SimpleMIPS.CPU.ALU_OP,
+			MEM_OP       = SimpleMIPS.CPU.MEM_OP,
+			BRANCH_COND  = SimpleMIPS.CPU.BRANCH_COND,
+			asmResult    = null;
 
 		function decodeException(ex) {
 			var res = '[CPU]';
-			if (ex & exCode.INVALID_INST) { res += 'Invalid instruction.';}
-			if (ex & exCode.INT_OVERFLOW) { res += 'Arithmetic Overflow.';}
-			if (ex & exCode.PC_ALIGN) { res += 'Target address is not aligned.';}
-			if (ex & exCode.DATA_ALIGN) { res += 'Data address is not aligned.';}
-			if (ex & exCode.BRANCH_IN_DELAY_SLOT) { 'Branch instruction in delay slot.';}
-			if (ex & exCode.BREAK) { res += 'Software break.';}
-			if (ex & exCode.PC_LIMIT) { res += 'PC cannot exceed 0x100000000 in simulator.';}
+			if (ex & exCode.INVALID_INST)  res += 'Invalid instruction.';
+			if (ex & exCode.INT_OVERFLOW)  res += 'Arithmetic Overflow.';
+			if (ex & exCode.PC_ALIGN)      res += 'Target address is not aligned.';
+			if (ex & exCode.DATA_ALIGN)    res += 'Data address is not aligned.';
+			if (ex & exCode.BREAK)         res += 'Software break.';
+			if (ex & exCode.PC_LIMIT)      res += 'PC cannot exceed 0x100000000 in simulator.';
 			return res;
+		}
+
+		function checkBreakpoint() {
+			var line = pcToLine(cpu.pc, asmResult);
+			if (line && breakpoints[line]) {
+				outputField.log('[CPU]Breakpoint hit at line ' + line);
+				return true;
+			}
+			return false;
+		}
+
+		function updateStackViewer() {
+			var sp = curRegisterFile[29] || 0x7ffffffc;
+			var html = '';
+			for (var i = -4; i <= 4; i++) {
+				var addr = (sp + i * 4) >>> 0, val = 0;
+				try { val = mem.getWord(addr); } catch(e) {}
+				var label = i===0 ? '$sp    ' : (i<0 ? '$sp'+(i*4) : '$sp+'+(i*4));
+				var cls   = i===0 ? 'sp-current' : '';
+				html += '<p class="'+cls+'"><span class="saddr">'+label+'</span>'
+				      + '<span class="sval">'+formatHex(val)+'</span></p>';
+			}
+			$stackWindow.html(html);
 		}
 
 		function updateCPUStatus() {
@@ -572,429 +656,255 @@
 			$cycleText.text(cpu.cycle);
 			$stallText.text(cpu.stalls);
 			cpu.dumpRegisterFile(curRegisterFile);
-			var $cur;
-			for (var i = 0;i < 32;i++) {
-				$cur = $registers[i];
-				if (registerValueFormat == 'dec') {
-					$cur.text(curRegisterFile[i]);
-				} else {
-					$cur.text(formatHex(curRegisterFile[i]));
-				}
-				if (curRegisterFile[i] != lastRegisterFile[i]) {
-					$cur.addClass('changed');
-				} else {
-					$cur.removeClass('changed');
-				}
+			for (var i = 0; i < 32; i++) {
+				var $cur = $registers[i];
+				$cur.text(registerValueFormat=='dec' ? curRegisterFile[i] : formatHex(curRegisterFile[i]));
+				if (curRegisterFile[i] != lastRegisterFile[i]) $cur.addClass('changed');
+				else $cur.removeClass('changed');
 			}
-			// swap buffer
-			var tmp = curRegisterFile;
-			curRegisterFile = lastRegisterFile;
-			lastRegisterFile = tmp;
-			lastPC = curPC;
-			lastInst = curInst;
+			var tmp = curRegisterFile; curRegisterFile = lastRegisterFile; lastRegisterFile = tmp;
+			$hiText.text(registerValueFormat=='dec' ? cpu.hi : formatHex(cpu.hi));
+			$loText.text(registerValueFormat=='dec' ? cpu.lo : formatHex(cpu.lo));
+			updateStackViewer();
 
-			// pipeline update
-			var str,
-				if_id = cpu.if_id,
-				id_ex = cpu.id_ex,
-				ex_ma = cpu.ex_ma,
-				ma_wb = cpu.ma_wb,
-				debugInfo = cpu.debugInfo;
-			//$pcIF.text(cpu.if_id.pc);
-			$pIF.text((debugInfo.stallFlag & STALL_FLAGS.IF) ? 'IF(Stalled)' : 'IF');
-			$pID.text((debugInfo.stallFlag & STALL_FLAGS.ID) ? 'ID(Stalled)' : 'ID');
+			// pipeline
+			var str, if_id=cpu.if_id, id_ex=cpu.id_ex, ex_ma=cpu.ex_ma, ma_wb=cpu.ma_wb,
+				di=cpu.debugInfo;
+			$pIF.text((di.stallFlag & STALL_FLAGS.IF) ? 'IF(Stalled)' : 'IF');
+			$pID.text((di.stallFlag & STALL_FLAGS.ID) ? 'ID(Stalled)' : 'ID');
 			$instIF.text(assembler.disassemble(if_id.inst));
 			$instID.text(assembler.disassemble(id_ex.inst));
 			$instEX.text(assembler.disassemble(ex_ma.inst));
 			$instMA.text(assembler.disassemble(ma_wb.inst));
 			$instWB.text(assembler.disassemble(cpu.retiredInst));
-			// ID
-			$bCond.text(translateBranchCondition(debugInfo.bCond));
-			if (debugInfo.bCond >= 0) {
-				if (debugInfo.bCond == BRANCH_COND.N) {
-					$bCondAVal.text('n/a');
-					$bCondBVal.text('n/a');
-					$bCondASrc.text('n/a');
-					$bCondBSrc.text('n/a');
+			$bCond.text(translateBranchCondition(di.bCond));
+			if (di.bCond >= 0) {
+				if (di.bCond == BRANCH_COND.N) {
+					$bCondAVal.text('n/a'); $bCondBVal.text('n/a');
+					$bCondASrc.text('n/a'); $bCondBSrc.text('n/a');
 				} else {
-					$bCondAVal.text(formatHex(debugInfo.bCondAVal));
-					$bCondBVal.text(formatHex(debugInfo.bCondBVal));
-					$bCondASrc.text('r' + debugInfo.bCondASrc);
-					$bCondBSrc.text('r' + debugInfo.bCondBSrc);
+					$bCondAVal.text(formatHex(di.bCondAVal)); $bCondBVal.text(formatHex(di.bCondBVal));
+					$bCondASrc.text('r'+di.bCondASrc);        $bCondBSrc.text('r'+di.bCondBSrc);
 				}
-				
-				if (debugInfo.bBaseSrc < 32) {
-					$bBaseSrc.text('r' + debugInfo.bBaseSrc);
-				} else if (debugInfo.bBaseSrc == 32) {
-					$bBaseSrc.text('pc');
-				} else {
-					$bBaseSrc.text('pc[27-0]');
-				}
-				$bTarget.text(debugInfo.bTarget !=undefined ? formatHex(debugInfo.bTarget) : 'n/a');
-				$bTaken.text(debugInfo.bTaken.toString());
+				if (di.bBaseSrc < 32) $bBaseSrc.text('r'+di.bBaseSrc);
+				else if (di.bBaseSrc == 32) $bBaseSrc.text('pc');
+				else $bBaseSrc.text('pc[27-0]');
+				$bTarget.text(di.bTarget != undefined ? formatHex(di.bTarget) : 'n/a');
+				$bTaken.text(di.bTaken.toString());
 			} else {
-				$bTaken.text('n/a');
-				$bCondAVal.text('n/a');
-				$bCondBVal.text('n/a');
-				$bCondASrc.text('n/a');
-				$bCondBSrc.text('n/a');
-				$bBaseSrc.text('n/a');
-				$bTarget.text('n/a');
+				$bTaken.text('n/a'); $bCondAVal.text('n/a'); $bCondBVal.text('n/a');
+				$bCondASrc.text('n/a'); $bCondBSrc.text('n/a'); $bBaseSrc.text('n/a'); $bTarget.text('n/a');
 			}
-			if (debugInfo.memWSrc) {
-				str = 'r' + debugInfo.memWSrc;
-				str = (debugInfo.memWFwd) ? str + '[' + debugInfo.memWFwd + ']':str;
-				$memWSrc.text(str);
-				$memWVal.text(formatHex(debugInfo.memWVal));
-			} else {
-				$memWSrc.text('n/a');
-				$memWVal.text('n/a');
-			}
-
-			// EX
-			$aluOp.text(translateALUOp(debugInfo.aluOp));
-			if (debugInfo.aluA != undefined) {
-				$aluA.text(formatHex(debugInfo.aluA));
-				str = (debugInfo.aluASrc == 33) ? 'Immediate' : 'r' + debugInfo.aluASrc;
-				str = (debugInfo.aluAFwd) ? str + '[' + debugInfo.aluAFwd + ']' : str;
-				$aluASrc.text(str);
-			} else {
-				$aluA.text('n/a');
-				$aluASrc.text('n/a');
-			}
-			if (debugInfo.aluB != undefined) {
-				$aluB.text(formatHex(debugInfo.aluB));
-				str = (debugInfo.aluBSrc == 33) ? 'Immediate' : 'r' + debugInfo.aluBSrc;
-				str = (debugInfo.aluBFwd) ? str + '[' + debugInfo.aluBFwd + ']' : str;
-				$aluBSrc.text(str);
-			} else {
-				$aluB.text('n/a');
-				$aluBSrc.text('n/a');
-			}
-
-			// MA
-			$memOp.text(translateMemOp(debugInfo.memOp));
-			if (debugInfo.memOp > 0) {
-				$memAddr.text(formatHex(debugInfo.memAddr));
-				$memVal.text(formatHex(debugInfo.memVal));
-			} else {
-				$memAddr.text('n/a');
-				$memVal.text('n/a');
-			}
-			// WB
-			if (debugInfo.regOp) {
-				$regOp.text('Write');
-				$regSrc.text(debugInfo.regSrc ? 'Memory' : 'ALU');
-				$regDst.text('r' + debugInfo.regDst);
-				$regVal.text(debugInfo.regVal);
-			} else {
-				$regOp.text('n/a');
-				$regSrc.text('n/a');
-				$regDst.text('n/a');
-				$regVal.text('n/a');
-			}
+			if (di.memWSrc) {
+				str = 'r'+di.memWSrc; str = di.memWFwd ? str+'['+di.memWFwd+']' : str;
+				$memWSrc.text(str); $memWVal.text(formatHex(di.memWVal));
+			} else { $memWSrc.text('n/a'); $memWVal.text('n/a'); }
+			$aluOp.text(translateALUOp(di.aluOp));
+			if (di.aluA != undefined) {
+				$aluA.text(formatHex(di.aluA));
+				str = di.aluASrc==33 ? 'Immediate' : 'r'+di.aluASrc;
+				$aluASrc.text(di.aluAFwd ? str+'['+di.aluAFwd+']' : str);
+			} else { $aluA.text('n/a'); $aluASrc.text('n/a'); }
+			if (di.aluB != undefined) {
+				$aluB.text(formatHex(di.aluB));
+				str = di.aluBSrc==33 ? 'Immediate' : 'r'+di.aluBSrc;
+				$aluBSrc.text(di.aluBFwd ? str+'['+di.aluBFwd+']' : str);
+			} else { $aluB.text('n/a'); $aluBSrc.text('n/a'); }
+			$memOp.text(translateMemOp(di.memOp));
+			if (di.memOp > 0) { $memAddr.text(formatHex(di.memAddr)); $memVal.text(formatHex(di.memVal)); }
+			else               { $memAddr.text('n/a'); $memVal.text('n/a'); }
+			if (di.regOp) {
+				$regOp.text('Write'); $regSrc.text(di.regSrc ? 'Memory' : 'ALU');
+				$regDst.text('r'+di.regDst); $regVal.text(di.regVal);
+			} else { $regOp.text('n/a'); $regSrc.text('n/a'); $regDst.text('n/a'); $regVal.text('n/a'); }
 		}
 
 		function translateBranchCondition(cond) {
-			switch (cond) {
-				case BRANCH_COND.LTZ:
-					return 'A<0';
-				case BRANCH_COND.GTZ:
-					return 'A>0';
-				case BRANCH_COND.LTEZ:
-					return 'A<=0';
-				case BRANCH_COND.GTEZ:
-					return 'A>=0';
-				case BRANCH_COND.EQ:
-					return 'A==B';
-				case BRANCH_COND.NEQ:
-					return 'A!=B';
-				case BRANCH_COND.N:
-					return 'Unconditional';
-				default:
-					return 'n/a';
+			switch(cond) {
+				case BRANCH_COND.LTZ: return 'A<0';  case BRANCH_COND.GTZ:  return 'A>0';
+				case BRANCH_COND.LTEZ:return 'A<=0'; case BRANCH_COND.GTEZ: return 'A>=0';
+				case BRANCH_COND.EQ:  return 'A==B'; case BRANCH_COND.NEQ:  return 'A!=B';
+				case BRANCH_COND.N:   return 'Unconditional';
+				default: return 'n/a';
 			}
 		}
-
 		function translateMemOp(op) {
-			switch (op) {
-				case 1: return 'ReadByte';
-				case 2: return 'ReadHalfword';
-				case 3: return 'ReadWord';
-				case 4: return 'WriteByte';
-				case 5: return 'WriteHalfword';
-				case 6: return 'WriteWord'
-				default: return 'n/a';
+			switch(op) {
+				case 1:return 'ReadByte'; case 2:return 'ReadHalfword'; case 3:return 'ReadWord';
+				case 4:return 'WriteByte';case 5:return 'WriteHalfword';case 6:return 'WriteWord';
+				default:return 'n/a';
 			}
 		}
-
 		function translateALUOp(op) {
-			switch (op) {
-				case ALU_OP.ADD: return 'add';
-				case ALU_OP.SUB: return 'sub';
-				case ALU_OP.AND: return 'and';
-				case ALU_OP.OR:  return 'or';
-				case ALU_OP.XOR: return 'xor';
-				case ALU_OP.NOR: return 'nor';
-				case ALU_OP.SLL: return 'sll';
-				case ALU_OP.SRL: return 'srl';
-				case ALU_OP.SRA: return 'sra';
-				case ALU_OP.SLT: return 'slt';
-				case ALU_OP.SLTU:  return 'slti';
-				case ALU_OP.NOP:
+			switch(op) {
+				case ALU_OP.ADD:return 'add'; case ALU_OP.SUB:return 'sub';
+				case ALU_OP.AND:return 'and'; case ALU_OP.OR: return 'or';
+				case ALU_OP.XOR:return 'xor'; case ALU_OP.NOR:return 'nor';
+				case ALU_OP.SLL:return 'sll'; case ALU_OP.SRL:return 'srl';
+				case ALU_OP.SRA:return 'sra'; case ALU_OP.SLT:return 'slt';
+				case ALU_OP.SLTU:return 'sltu';
 				default: return 'n/a';
 			}
 		}
 
-		function updateRegisterFormat() {
-			var $cur;
-			for (var i = 0;i < 32;i++) {
-				$cur = $registers[i];
-				if (registerValueFormat == 'dec') {
-					$cur.text(curRegisterFile[i]);
-				} else {
-					$cur.text(formatHex(curRegisterFile[i]));
-				}
-			}
-		}
+		$regFormatDec.click(function(){ registerValueFormat='dec'; updateCPUStatus(); });
+		$regFormatHex.click(function(){ registerValueFormat='hex'; updateCPUStatus(); });
 
-		// switch format
-		$regFormatDec.click(function () {
-			registerValueFormat = 'dec';
-			updateRegisterFormat();
-		});
-		$regFormatHex.click(function () {
-			registerValueFormat = 'hex';
-			updateRegisterFormat();
-		});
-
-		$btnToggleStatusView.click(function () {
+		$btnToggleStatusView.click(function() {
 			if ($btnToggleStatusView.hasClass('pipeline')) {
-				$pipelineView.hide();
-				$registerView.show();
-				$btnToggleStatusView.text('Pipeline')
-					.removeClass('pipeline');
+				$pipelineView.hide(); $registerView.show();
+				$btnToggleStatusView.text('Pipeline').removeClass('pipeline');
 			} else {
-				$pipelineView.show();
-				$registerView.hide();
-				$btnToggleStatusView.text('Registers')
-					.addClass('pipeline');
+				$pipelineView.show(); $registerView.hide();
+				$btnToggleStatusView.text('Registers').addClass('pipeline');
 			}
 		});
 
-		// cpu control
-		$btnReset.click(function () {
-			// clear free running timer
+		$btnReset.click(function() {
 			if (freeRunning) {
-				clearInterval(timer);
-				timer = null;
-				freeRunning = false;
-				$btnRun.text('Run');
-				$cpuText.text('Idle');
+				clearInterval(timer); timer=null; freeRunning=false;
+				$btnRun.text('Run'); $cpuText.text('Idle');
 			}
-			cpu.reset();
+			cpu.reset(); eventBus.post('cpuUpdate');
+		});
+
+		$btnStep.click(function() {
+			if (!loaded) { outputField.log('[CPU]No program loaded. Please load program first.'); return; }
+			if (freeRunning) { $btnRun.click(); return; }
+			mem.step();
+			var ex = cpu.step();
+			if (ex > 0) outputField.log(decodeException(ex));
+			checkBreakpoint();
 			eventBus.post('cpuUpdate');
 		});
 
-		$btnStep.click(function () {
-			var ex;
-			if (loaded) {
-				if (freeRunning) {
-					// stop it first
-					$btnRun.click();
-				} else {
-					// step
-					mem.step();
-					ex = cpu.step();
-					if (ex > 0) {
-						outputField.log(decodeException(ex));
-					}
-					eventBus.post('cpuUpdate');
-				}
+		$btnRun.click(function() {
+			if (!loaded) { outputField.log('[CPU]No program loaded. Please load program first.'); return; }
+			if (freeRunning) {
+				clearInterval(timer); timer=null; freeRunning=false;
+				$btnRun.text('Run'); $cpuText.text('Idle');
+				eventBus.post('cpuUpdate');
 			} else {
-				outputField.log('[CPU]No program loaded. Please load program first.');
-			}
-		});
-
-		$btnRun.click(function () {
-			if (loaded) {
-				if (freeRunning) {
-					clearInterval(timer);
-					timer = null;
-					freeRunning = false;
-					$btnRun.text('Run');
-					$cpuText.text('Idle');
-					eventBus.post('cpuUpdate');
-				} else {
-					timer = setInterval(function () {
-						var i, n, ex;
-						// running at 20*50000 = 1000000 = 100kHz
-						for (i = 0;i < 5000;i++) {
-							mem.step();
-							ex = cpu.step();
-							if (ex > 0) {
-								outputField.log(decodeException(ex));
-								$btnRun.text('Run');
-								$cpuText.text('Idle');
-								freeRunning = false;
-								clearInterval(timer);
-								timer = null;
-								eventBus.post('cpuUpdate');
-								break;
-							}
+				timer = setInterval(function() {
+					for (var i = 0; i < 5000; i++) {
+						mem.step();
+						var ex = cpu.step();
+						if (ex > 0) {
+							outputField.log(decodeException(ex));
+							$btnRun.text('Run'); $cpuText.text('Idle');
+							freeRunning=false; clearInterval(timer); timer=null;
+							eventBus.post('cpuUpdate'); break;
 						}
-					}, 50);
-					freeRunning = true;
-					$btnRun.text('Stop');
-					$cpuText.text('Busy');
-					outputField.log('[CPU]Running...');
-					outputField.log('[CPU]Do not let cpu run out of valid text segment. Unvisited memory segments will be filled with zeros and cpu will keep excuting NOP. This would force simulator to allocate more memory for new segments.', 'warn')
-				}
-			} else {
-				outputField.log('[CPU]No program loaded. Please load program first.')
+						if (checkBreakpoint()) {
+							$btnRun.text('Run'); freeRunning=false;
+							clearInterval(timer); timer=null; $cpuText.text('Idle');
+							eventBus.post('cpuUpdate'); break;
+						}
+					}
+				}, 50);
+				freeRunning=true; $btnRun.text('Stop'); $cpuText.text('Busy');
+				outputField.log('[CPU]Running...');
+				outputField.log('[CPU]Do not let cpu run out of valid text segment.', 'warn');
 			}
 		});
 
 		eventBus.register('cpuUpdate', updateCPUStatus);
-		eventBus.register('programAssembled', function (asmResult) {
+		eventBus.register('programAssembled', function(result) {
+			asmResult = result;
 			mem.importAsm(asmResult);
-			loaded = true;
-			$cpuText.text('Idle');
+			loaded=true; $cpuText.text('Idle');
 		});
-		eventBus.register('programUnloaded', function () {
-			if (freeRunning) {
-				$btnRun.click();
-			}
-			cpu.reset();
-			$cpuText.text('No program');
-			loaded = false;
+		eventBus.register('programUnloaded', function() {
+			if (freeRunning) $btnRun.click();
+			cpu.reset(); $cpuText.text('No program'); loaded=false;
 		});
 
-		exports.isProgramLoaded = function () {
-			return loaded;
-		}
-
+		exports.isProgramLoaded = function() { return loaded; };
 		return exports;
 	})(eventBus);
 
-	// memory field
+	// ── memoryField ───────────────────────────────────────────────
 	var memoryField = (function (eventBus) {
 		var exports = {};
-		// elements
-		var $btnLookup = $('#btnLookup'),
-			$btnMemoryHelp = $('#btnMemoryHelp'),
-			$addrInput = $('#addrInput'),
-			$memory = $('#memory-window'),
-			$memorySlots = [],
-			$addrSlots = [];
-		
-		// vars
+		var $btnLookup    = $('#btnLookup'),
+			$btnMemoryHelp= $('#btnMemoryHelp'),
+			$addrInput    = $('#addrInput'),
+			$memory       = $('#memory-window'),
+			$memorySlots  = [],
+			$addrSlots    = [];
 		var MEMORY_BUFFER_SIZE = 22*3*4,
-			memWatchAddr = 0x10000000,
-			curMemoryBuffer = new Uint32Array(MEMORY_BUFFER_SIZE),
-			lastMemoryBuffer = new Uint32Array(MEMORY_BUFFER_SIZE);
+			memWatchAddr     = 0x10000000,
+			curMemoryBuffer  = new Uint32Array(MEMORY_BUFFER_SIZE),
+			lastMemoryBuffer = new Uint32Array(MEMORY_BUFFER_SIZE),
+			lastRegisterFile = new Uint32Array(32);
 
 		function updateMemoryWindow(ignoreChange) {
-			// 22row x 3col x 4bytes = 352bytes
 			var i, j, n = MEMORY_BUFFER_SIZE;
 			if ($memory.children().length == 0) {
-				// initialize
-				for (i = 0;i < n;i+=12) {
+				for (i = 0; i < n; i += 12) {
 					var $p = $('<p></p>');
 					$addrSlots.push($('<span class="addr"></span>').appendTo($p));
 					$p.append('<span>:<span>');
-					for (j = 0;j < 12;j++) {
+					for (j = 0; j < 12; j++)
 						$memorySlots.push($('<span class="content"><span>').appendTo($p));
-					}
 					$memory.append($p);
 				}
-			} 
-			// update
+			}
 			mem.dumpToBuffer(memWatchAddr, MEMORY_BUFFER_SIZE, curMemoryBuffer);
-			for (i = 0;i < n;i++) {
-				$memorySlots[i].text(formatByte(curMemoryBuffer[i], 2));
-				if (curMemoryBuffer[i] != lastMemoryBuffer[i] && !ignoreChange) {
+			for (i = 0; i < n; i++) {
+				$memorySlots[i].text(formatByte(curMemoryBuffer[i]));
+				if (curMemoryBuffer[i] != lastMemoryBuffer[i] && !ignoreChange)
 					$memorySlots[i].addClass('changed');
-				} else {
-					$memorySlots[i].removeClass('changed');
-				}
+				else $memorySlots[i].removeClass('changed');
 			}
-			for (i = 0;i < $addrSlots.length;i++) {
-				$addrSlots[i].text(formatHex(memWatchAddr+(i*12)));
-			}
-			// swap
-			var tmp = curMemoryBuffer;
-			curMemoryBuffer = lastMemoryBuffer;
-			lastMemoryBuffer = tmp;
+			for (i = 0; i < $addrSlots.length; i++)
+				$addrSlots[i].text(formatHex(memWatchAddr + (i*12)));
+			var tmp = curMemoryBuffer; curMemoryBuffer = lastMemoryBuffer; lastMemoryBuffer = tmp;
 		}
 
-		$btnLookup.click(function () {
-			// check lookup range
+		eventBus.register('cpuUpdate', function() {
+			var regs = new Uint32Array(32); cpu.dumpRegisterFile(regs); lastRegisterFile = regs;
+			updateMemoryWindow();
+		});
+
+		$btnLookup.click(function() {
 			var sa = $addrInput.val().trim();
 			if (sa == '$sp') sa = lastRegisterFile[29];
 			if (sa == '$pc') sa = cpu.pc;
-			// try to look up in symbol table first
-			if (isNaN(sa)) {
-				sa = asmResult.symbolTable[sa];
-			} else {
-				sa = parseInt(sa);
-			}
+			if (isNaN(sa)) { sa = (window.asmResult||{symbolTable:{}}).symbolTable[sa]; }
+			else { sa = parseInt(sa); }
 			if (isNaN(sa) || sa == undefined) {
-				outputField.log('[Memory]Invaild address number.', 'error');
-			} else {
-				if ((sa > (0x2fffffff) && sa < 0x70000000) || sa > 0x7fffffff) {
-					outputField.log('[Memory]Due to browser limit, viewable memory space range from 0x00000000 to 0x2fffffff and 0x70000000 to 0x7fffffff.', 'error');
-				} else {
-					memWatchAddr = sa;
-					eventBus.post('memoryUpdate', true);
-				}
-			}
+				outputField.log('[Memory]Invalid address.', 'error');
+			} else if ((sa > 0x2fffffff && sa < 0x70000000) || sa > 0x7fffffff) {
+				outputField.log('[Memory]Address out of viewable range.', 'error');
+			} else { memWatchAddr = sa; eventBus.post('memoryUpdate', true); }
 		});
 
-		$btnMemoryHelp.click(function () {
-			outputField.info('[Help]You many enter here a hex number, a label (without colon), $sp or $pc.')
+		$btnMemoryHelp.click(function() {
+			outputField.info('[Help]Enter a hex number, a label, $sp or $pc.');
 		});
 
-		eventBus.register('cpuUpdate', updateMemoryWindow);
 		eventBus.register('memoryUpdate', updateMemoryWindow);
-
 		eventBus.post('memoryUpdate');
-
 		return exports;
 	})(eventBus);
 
-	// output field
+	// ── outputField ───────────────────────────────────────────────
 	var outputField = (function (eventBus) {
 		var exports = {};
-		// elements
-		$output = $('#output-window'),
-		$btnClear = $('#btnClear');
-
-		var log =exports.log = function (msg, type) {
-			var newMsg = document.createElement('p');
-			newMsg.innerHTML = '[' + (new Date()).toLocaleString() + ']' + msg;
-			newMsg.className = type || '';
-			$output.append(newMsg);
+		var $output  = $('#output-window'),
+			$btnClear= $('#btnClear');
+		var log = exports.log = function(msg, type) {
+			var p = document.createElement('p');
+			p.innerHTML = '[' + (new Date()).toLocaleString() + ']' + msg;
+			p.className = type || '';
+			$output.append(p);
 			$output[0].scrollTop = $output[0].scrollHeight;
-		}
-
-		exports.info = function (msg) {
-			log(msg, 'info');
-		}
-
-		exports.warn = function (msg) {
-			log(msg, 'warn');
-		}
-
-		exports.error = function (msg) {
-			log(msg, 'error');
-		}
-
-		// event handling
-		$btnClear.click(function () {
-			$output.empty();
-		});
-
+		};
+		exports.info  = function(msg) { log(msg, 'info'); };
+		exports.warn  = function(msg) { log(msg, 'warn'); };
+		exports.error = function(msg) { log(msg, 'error'); };
+		$btnClear.click(function() { $output.empty(); });
 		return exports;
 	})(eventBus);
 

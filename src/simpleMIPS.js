@@ -2111,8 +2111,8 @@ var SimpleMIPS = (function (undefined) {
 			{ n: 'STRING'	, r : /^"(([^\\"]|\\.)*)"/ },
 			{ n: 'COMMA'	, r : /^\s*,\s*/ },
 			{ n: 'SPACE'	, r : /^\s+/ },
-			{ n: 'REGOPR'	, r : /^(\$\w{1,2}|zero)/ },
-			{ n: 'COMOPR'	, r : /^(-*\d*)\((\$\w{1,2}|zero)\)/ }, // char is also integer
+			{ n: 'REGOPR'	, r : /^(\$\w+|zero)/ },
+			{ n: 'COMOPR'	, r : /^(-*\d*)\((\$\w+|zero)\)/ }, // char is also integer
 			{ n: 'INTEGER'	, r : /^(0x[\da-f]+|-*\d+|'([^'\\]|\\*)')/ },
 			{ n: 'WORD'		, r : /^(\w+)(?!:)/ }
 		], 
@@ -2732,7 +2732,7 @@ var SimpleMIPS = (function (undefined) {
 		function convertRegName(regname) {
 			// GPRs only
 			var idx;
-			if (regname == 'zero') {
+			if (regname == 'zero' || regname == '$zero') {
 				return 0;
 			} else if ((idx = regAliases.indexOf(regname)) >= 0) {
 				return idx;
