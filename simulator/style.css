@@ -1,7 +1,7 @@
 body {
 	font-size: 13px;
 	color:#333;
-	font-family: 'Helvetica', 'Arial'; 
+	font-family: 'Helvetica', 'Arial';
 }
 
 .clearfix {
@@ -22,7 +22,7 @@ fieldset {
 	border-radius: 5px;
 	margin: 0;
 	padding: 4px 10px 8px 8px;
-	overflow: hidden;
+	/* overflow: hidden removed — was clipping editor on Windows */
 }
 
 fieldset:hover {
@@ -68,7 +68,7 @@ input[type="text"] {
 }
 
 #top-controls fieldset {
-	height: 436px;
+	min-height: 436px;
 }
 .top_grid {
 	float: left;
@@ -78,7 +78,7 @@ input[type="text"] {
 		#editor-wrapper {
 			display: flex;
 			margin-top: 5px;
-			width: 340px;
+			width: 100%;      /* fill fieldset content area, no overflow */
 			height: 382px;
 		}
 		#line-numbers {
@@ -96,6 +96,7 @@ input[type="text"] {
 			text-align: right;
 			line-height: 18px;
 			user-select: none;
+			-webkit-user-select: none;
 			cursor: pointer;
 			box-sizing: border-box;
 		}
@@ -117,6 +118,7 @@ input[type="text"] {
 			position: relative;
 			flex: 1;
 			overflow: hidden;
+			min-width: 0;    /* flex child shrink fix */
 		}
 		#highlight-mirror {
 			position: absolute;
@@ -135,13 +137,16 @@ input[type="text"] {
 			background: white;
 			box-sizing: border-box;
 			color: #333;
+			z-index: 1;
 		}
 		#input {
 			position: absolute;
 			top: 0; left: 0; right: 0; bottom: 0;
 			background: transparent;
 			color: transparent;
+			-webkit-text-fill-color: transparent; /* WebKit cross-platform */
 			caret-color: #333;
+			-webkit-caret-color: #333;
 			border-radius: 0 3px 3px 0;
 			font-size: 12px;
 			font-family: 'Courier New', monospace;
@@ -151,6 +156,13 @@ input[type="text"] {
 			padding: 3px;
 			overflow: auto;
 			border: 1px solid #ccc;
+			z-index: 2;
+			/* Hide scrollbar — on Windows scrollbar takes space, misaligning mirror */
+			scrollbar-width: none;
+			-ms-overflow-style: none;
+		}
+		#input::-webkit-scrollbar {
+			display: none;
 		}
 		.asm-inst    { color: #0044cc; font-weight: bold; }
 		.asm-reg     { color: #2a7a00; }
@@ -172,7 +184,7 @@ input[type="text"] {
 			position: relative;
 		}
 		#disassembly-window p.active {
-			
+
 		}
 		#disassembly-window p:before {
 			content: "";
@@ -185,23 +197,23 @@ input[type="text"] {
 			color: white;
 			text-align: center;
 		}
-		#disassembly-window p.if:before { 
+		#disassembly-window p.if:before {
 			content:"F";
 			background: blue;
 		}
-		#disassembly-window p.id:before { 
+		#disassembly-window p.id:before {
 			content:"D";
 			background: green;
 		}
-		#disassembly-window p.ex:before { 
+		#disassembly-window p.ex:before {
 			content:"E";
 			background: red;
 		}
-		#disassembly-window p.ma:before { 
+		#disassembly-window p.ma:before {
 			content:"M";
 			background: purple;
 		}
-		#disassembly-window p.wb:before { 
+		#disassembly-window p.wb:before {
 			content:"W";
 			background: orange;
 		}
@@ -233,7 +245,7 @@ input[type="text"] {
 			font-weight: bold;
 		}
 		#status-table .content {
-			color : #666;	
+			color : #666;
 		}
 		#status-table .content.changed {
 			color: red;
@@ -242,6 +254,7 @@ input[type="text"] {
 			border-radius: 0;
 			float: none;
 			background: white;
+			min-height: auto;
 			height: auto;
 			padding: 0 8px 7px 5px;
 		}
